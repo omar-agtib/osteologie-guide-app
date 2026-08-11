@@ -1,16 +1,19 @@
 import { useGLTF } from "@react-three/drei/native";
-import { useMemo } from "react";
+
+import { useEffect, useMemo } from "react";
+
 import * as THREE from "three";
 
 const skeletonAsset = require("../../../assets/models/human-skeleton-mobile_v2.glb");
 
-export default function SkeletonModel() {
+type Props = {
+  onLoaded?: () => void;
+};
+
+export default function SkeletonModel({ onLoaded }: Props) {
   const { scene } = useGLTF(skeletonAsset);
 
   const model = useMemo(() => {
-    // Important:
-    // Home + Mode Libre peuvent utiliser le même GLB.
-    // On clone la scène pour éviter qu'ils partagent les mêmes meshes/materials.
     const clone = scene.clone(true);
 
     const grayMaterial = new THREE.MeshStandardMaterial({
@@ -31,13 +34,10 @@ export default function SkeletonModel() {
       }
     });
 
-    // -------------------------
-    // Center + normalize model
-    // -------------------------
-
     const box = new THREE.Box3().setFromObject(clone);
 
     const size = new THREE.Vector3();
+
     const center = new THREE.Vector3();
 
     box.getSize(size);
@@ -53,6 +53,15 @@ export default function SkeletonModel() {
 
     return clone;
   }, [scene]);
+
+  /*
+   * useGLTF utilise Suspense.
+   * Donc si ce composant arrive ici,
+   * le GLB est déjà disponible.
+   */
+  useEffect(() => {
+    onLoaded?.();
+  }, [model, onLoaded]);
 
   return <primitive object={model} />;
 }

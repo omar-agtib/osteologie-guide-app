@@ -4,11 +4,15 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import { Suspense, useMemo, useRef, useState } from "react";
 
-import { Dimensions, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
 
 import * as THREE from "three";
 
 import SkeletonModel from "./SkeletonModel";
+
+import BoneDetailModal from "./BoneDetailModal";
+
+import { ArrowRight } from "lucide-react-native";
 
 type Rotation = {
   x: number;
@@ -103,8 +107,13 @@ function SkeletonScene({
 
   const selectedAnchorLocalRef = useRef(new THREE.Vector3());
 
-  const autoFocusRef = useRef({
-    active: false,
+  const autoFocusRef = useRef<{
+    phase: "idle" | "zoomOut" | "focus";
+    x: number;
+    y: number;
+    z: number;
+  }>({
+    phase: "idle",
     x: 0,
     y: 0,
     z: 2.3,
@@ -193,7 +202,7 @@ function SkeletonScene({
        * Si l'utilisateur commence à zoomer manuellement,
        * on annule l'auto-focus.
        */
-      autoFocusRef.current.active = false;
+      autoFocusRef.current.phase = "idle";
 
       const focus = pinchWorldPointRef.current;
 
@@ -207,49 +216,80 @@ function SkeletonScene({
     }
 
     /* ==========================================================
-   AUTO ZOOM ON SELECTED BONE
+   AUTO FOCUS TRANSITION
    ========================================================== */
 
-    if (autoFocusRef.current.active && !pinch.active) {
+    if (!pinch.active) {
       const target = autoFocusRef.current;
 
-      /*
-       * Déplacement progressif vers l'os.
-       */
-      cameraOffsetRef.current.x = THREE.MathUtils.lerp(
-        cameraOffsetRef.current.x,
-        target.x,
-        0.12,
-      );
+      /* =====================================
+     PHASE 1 : DEZOOM
+     ===================================== */
 
-      cameraOffsetRef.current.y = THREE.MathUtils.lerp(
-        cameraOffsetRef.current.y,
-        target.y,
-        0.12,
-      );
+      if (target.phase === "zoomOut") {
+        cameraOffsetRef.current.x = THREE.MathUtils.lerp(
+          cameraOffsetRef.current.x,
+          0,
+          0.1,
+        );
 
-      /*
-       * Zoom progressif.
-       */
-      zoomRef.current = THREE.MathUtils.lerp(zoomRef.current, target.z, 0.12);
+        cameraOffsetRef.current.y = THREE.MathUtils.lerp(
+          cameraOffsetRef.current.y,
+          0,
+          0.1,
+        );
 
-      const xReached = Math.abs(cameraOffsetRef.current.x - target.x) < 0.01;
+        zoomRef.current = THREE.MathUtils.lerp(zoomRef.current, 5, 0.1);
 
-      const yReached = Math.abs(cameraOffsetRef.current.y - target.y) < 0.01;
+        const xReached = Math.abs(cameraOffsetRef.current.x) < 0.03;
 
-      const zoomReached = Math.abs(zoomRef.current - target.z) < 0.01;
+        const yReached = Math.abs(cameraOffsetRef.current.y) < 0.03;
 
-      /*
-       * Fin de l'animation.
-       */
-      if (xReached && yReached && zoomReached) {
-        cameraOffsetRef.current.x = target.x;
+        const zoomReached = Math.abs(zoomRef.current - 5) < 0.05;
 
-        cameraOffsetRef.current.y = target.y;
+        if (xReached && yReached && zoomReached) {
+          cameraOffsetRef.current.x = 0;
+          cameraOffsetRef.current.y = 0;
+          zoomRef.current = 5;
 
-        zoomRef.current = target.z;
+          /*
+           * Le dézoom est terminé.
+           * Maintenant on commence le zoom
+           * vers le nouvel os.
+           */
+          target.phase = "focus";
+        }
+      } else if (target.phase === "focus") {
+        /* =====================================
+     PHASE 2 : ZOOM SUR LE NOUVEL OS
+     ===================================== */
+        cameraOffsetRef.current.x = THREE.MathUtils.lerp(
+          cameraOffsetRef.current.x,
+          target.x,
+          0.12,
+        );
 
-        autoFocusRef.current.active = false;
+        cameraOffsetRef.current.y = THREE.MathUtils.lerp(
+          cameraOffsetRef.current.y,
+          target.y,
+          0.12,
+        );
+
+        zoomRef.current = THREE.MathUtils.lerp(zoomRef.current, target.z, 0.12);
+
+        const xReached = Math.abs(cameraOffsetRef.current.x - target.x) < 0.01;
+
+        const yReached = Math.abs(cameraOffsetRef.current.y - target.y) < 0.01;
+
+        const zoomReached = Math.abs(zoomRef.current - target.z) < 0.01;
+
+        if (xReached && yReached && zoomReached) {
+          cameraOffsetRef.current.x = target.x;
+          cameraOffsetRef.current.y = target.y;
+          zoomRef.current = target.z;
+
+          target.phase = "idle";
+        }
       }
     }
 
@@ -382,32 +422,38 @@ function SkeletonScene({
      * Only auto-zoom if we are still looking at
      * almost the complete skeleton.
      */
-    if (zoomRef.current >= 3.8) {
-      const boneBox = new THREE.Box3().setFromObject(mesh);
+    const boneBox = new THREE.Box3().setFromObject(mesh);
 
-      const sphere = boneBox.getBoundingSphere(new THREE.Sphere());
+    const sphere = boneBox.getBoundingSphere(new THREE.Sphere());
 
-      const perspectiveCamera = camera as THREE.PerspectiveCamera;
+    const perspectiveCamera = camera as THREE.PerspectiveCamera;
 
-      const fov = THREE.MathUtils.degToRad(perspectiveCamera.fov);
+    const fov = THREE.MathUtils.degToRad(perspectiveCamera.fov);
 
-      /*
-       * Calculate approximately how close the camera
-       * should be depending on the size of the bone.
-       */
-      const calculatedZoom = sphere.radius / (0.28 * Math.tan(fov / 2));
+    const calculatedZoom = sphere.radius / (0.28 * Math.tan(fov / 2));
 
-      const targetZoom = clamp(calculatedZoom, 1.5, 3.0);
+    const targetZoom = clamp(calculatedZoom, 1.5, 3.0);
 
-      autoFocusRef.current = {
-        active: true,
+    /*
+     * Si nous sommes déjà zoomés sur un os,
+     * on commence par revenir à la vue générale.
+     *
+     * Sinon on peut zoomer directement.
+     */
 
-        x: tempWorldPosition.x,
-        y: tempWorldPosition.y,
+    const alreadyZoomed =
+      zoomRef.current < 3.8 ||
+      Math.abs(cameraOffsetRef.current.x) > 0.1 ||
+      Math.abs(cameraOffsetRef.current.y) > 0.1;
 
-        z: targetZoom,
-      };
-    }
+    autoFocusRef.current = {
+      phase: alreadyZoomed ? "zoomOut" : "focus",
+
+      x: tempWorldPosition.x,
+      y: tempWorldPosition.y,
+
+      z: targetZoom,
+    };
   });
 
   return (
@@ -474,25 +520,27 @@ function BoneCallout({
 
   const [labelSize, setLabelSize] = useState({
     width: 100,
-    height: 35,
+    height: 34,
   });
 
-  const margin = 14;
-  const arrowGap = 55;
+  const margin = 16;
+
+  // Distance entre l'os et le label
+  const gap = 65;
 
   const spaceRight = screenWidth - x;
 
   const spaceLeft = x;
 
-  const canShowRight = spaceRight > labelSize.width + arrowGap + margin;
+  const canGoRight = spaceRight >= labelSize.width + gap + margin;
 
-  const canShowLeft = spaceLeft > labelSize.width + arrowGap + margin;
+  const canGoLeft = spaceLeft >= labelSize.width + gap + margin;
 
   let placement: "right" | "left" | "bottom";
 
-  if (canShowRight) {
+  if (canGoRight) {
     placement = "right";
-  } else if (canShowLeft) {
+  } else if (canGoLeft) {
     placement = "left";
   } else {
     placement = "bottom";
@@ -501,76 +549,66 @@ function BoneCallout({
   let labelX = 0;
   let labelY = 0;
 
-  let endX = 0;
-  let endY = 0;
-
-  /* ========================================
+  /* ==========================================
      LABEL POSITION
-     ======================================== */
+     ========================================== */
 
   if (placement === "right") {
-    labelX = x + arrowGap;
+    labelX = x + gap;
 
     labelY = y - labelSize.height / 2;
-
-    endX = labelX - 6;
-
-    endY = labelY + labelSize.height / 2;
-  }
-
-  if (placement === "left") {
-    labelX = x - arrowGap - labelSize.width;
+  } else if (placement === "left") {
+    labelX = x - gap - labelSize.width;
 
     labelY = y - labelSize.height / 2;
+  } else {
+    // Pas de place sur les côtés
+    // -> mettre le nom sous l'os
 
-    endX = labelX + labelSize.width + 6;
-
-    endY = labelY + labelSize.height / 2;
-  }
-
-  if (placement === "bottom") {
     labelX = x - labelSize.width / 2;
 
-    labelY = y + arrowGap;
-
-    endX = labelX + labelSize.width / 2;
-
-    endY = labelY - 6;
+    labelY = y + gap;
   }
 
-  /* ========================================
-     NEVER LEAVE SCREEN
-     ======================================== */
+  /* ==========================================
+     KEEP LABEL INSIDE SCREEN
+     ========================================== */
 
   labelX = clamp(labelX, margin, screenWidth - labelSize.width - margin);
 
-  labelY = clamp(labelY, 90, screenHeight - labelSize.height - 30);
+  labelY = clamp(
+    labelY,
 
-  /*
-   * Recalculate arrow endpoint after clamping.
-   */
+    // évite le header Mode Libre
+    100,
+
+    screenHeight - labelSize.height - 25,
+  );
+
+  /* ==========================================
+     WHERE THE LINE ENDS
+     ========================================== */
+
+  let endX: number;
+  let endY: number;
 
   if (placement === "right") {
-    endX = labelX - 6;
+    endX = labelX - 5;
 
     endY = labelY + labelSize.height / 2;
-  }
-
-  if (placement === "left") {
-    endX = labelX + labelSize.width + 6;
+  } else if (placement === "left") {
+    endX = labelX + labelSize.width + 5;
 
     endY = labelY + labelSize.height / 2;
-  }
-
-  if (placement === "bottom") {
+  } else {
     endX = labelX + labelSize.width / 2;
 
-    endY = labelY - 6;
+    endY = labelY - 5;
   }
 
-  /* ========================================
-     LINE
-     ======================================== */
+  /* ==========================================
+     LINE GEOMETRY
+     ========================================== */
 
   const dx = endX - x;
   const dy = endY - y;
@@ -596,7 +634,7 @@ function BoneCallout({
         ]}
       />
 
-      {/* Ligne */}
+      {/* Ligne os -> nom */}
       <View
         style={[
           styles.boneLine,
@@ -616,7 +654,25 @@ function BoneCallout({
         ]}
       />
 
-      {/* Nom */}
+      {/* Tête de flèche */}
+      <View
+        style={{
+          position: "absolute",
+
+          left: endX - 9,
+          top: endY - 9,
+
+          transform: [
+            {
+              rotate: `${angle}rad`,
+            },
+          ],
+        }}
+      >
+        <ArrowRight size={18} color="#9B7300" strokeWidth={2.3} />
+      </View>
+
+      {/* Nom de l'os */}
       <View
         onLayout={(event) => {
           const { width, height } = event.nativeEvent.layout;
@@ -646,13 +702,17 @@ function BoneCallout({
     </View>
   );
 }
-
 /* ============================================================
    VIEWER
    ============================================================ */
 
 export default function ModeLibreSkeletonViewer() {
   const [selectedBone, setSelectedBone] = useState<string | null>(null);
+  const [selectedBoneMesh, setSelectedBoneMesh] = useState<THREE.Mesh | null>(
+    null,
+  );
+
+  const [detailVisible, setDetailVisible] = useState(false);
   const [annotation, setAnnotation] = useState<{
     x: number;
     y: number;
@@ -845,8 +905,9 @@ export default function ModeLibreSkeletonViewer() {
               cameraOffsetRef={cameraOffsetRef}
               pinchRef={pinchRef}
               tapRequestRef={tapRequestRef}
-              onBoneSelected={(name) => {
+              onBoneSelected={(name, mesh) => {
                 setSelectedBone(name);
+                setSelectedBoneMesh(mesh);
               }}
               onAnnotationChange={(data) => {
                 setAnnotation(data);
@@ -862,6 +923,26 @@ export default function ModeLibreSkeletonViewer() {
             y={annotation.y}
           />
         )}
+
+        {selectedBone && selectedBoneMesh && (
+          <Pressable
+            style={styles.detailButton}
+            onPress={() => {
+              setDetailVisible(true);
+            }}
+          >
+            <Text style={styles.detailButtonText}>Voir en détail</Text>
+          </Pressable>
+        )}
+
+        <BoneDetailModal
+          visible={detailVisible}
+          boneName={selectedBone}
+          mesh={selectedBoneMesh}
+          onClose={() => {
+            setDetailVisible(false);
+          }}
+        />
       </View>
     </GestureDetector>
   );
@@ -897,7 +978,7 @@ const styles = StyleSheet.create({
   boneNameContainer: {
     position: "absolute",
 
-    maxWidth: 180,
+    maxWidth: 170,
 
     paddingHorizontal: 8,
     paddingVertical: 5,
@@ -907,10 +988,28 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
 
- boneName: {
-  color: "#27323A",
-  fontSize: 15,
-  fontWeight: "700",
-  textAlign: "center",
-},
+  boneName: {
+    color: "#27323A",
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  detailButton: {
+    position: "absolute",
+    bottom: 30,
+    alignSelf: "center",
+
+    backgroundColor: "#27323A",
+
+    paddingHorizontal: 24,
+    paddingVertical: 13,
+
+    borderRadius: 24,
+  },
+
+  detailButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
+  },
 });

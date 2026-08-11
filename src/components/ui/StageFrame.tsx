@@ -1,7 +1,12 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { RotateCcw, ZoomIn } from "lucide-react-native";
 import React from "react";
-import { Pressable, StyleSheet, View, ViewStyle } from "react-native";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { colors, radii } from "../../constants/theme";
 import { Pill } from "./Pill";
 

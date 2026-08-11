@@ -1,9 +1,8 @@
 import { router } from "expo-router";
 import { BookOpen, Box } from "lucide-react-native";
 
-import { useMemo } from "react";
-
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, StyleSheet, Text, View } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -29,9 +28,34 @@ function initialsFrom(name: string | null) {
 }
 
 export default function HomeScreen() {
+  const skullRotation = useRef(new Animated.Value(0)).current;
+
   const { user } = useAuth();
 
   const insets = useSafeAreaInsets();
+
+  const [skeletonLoading, setSkeletonLoading] = useState(true);
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.timing(skullRotation, {
+        toValue: 1,
+        duration: 1800,
+        useNativeDriver: true,
+      }),
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [skullRotation]);
+
+  const skullRotate = skullRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
 
   const greetLabel = useMemo(() => greeting(new Date().getHours()), []);
 
@@ -79,7 +103,38 @@ export default function HomeScreen() {
         showControls={false}
         transparentBackground
       >
-        <HomeSkeletonViewer />
+        <View style={styles.viewerContainer}>
+          <HomeSkeletonViewer
+            onLoaded={() => {
+              setSkeletonLoading(false);
+            }}
+          />
+
+          {skeletonLoading && (
+            <View style={styles.loader}>
+              <View style={styles.loaderAnimationArea}>
+                <Animated.Image
+                  source={require("../../../../assets/images/skeleton-head.png")}
+                  style={[
+                    styles.loaderSkull,
+                    {
+                      transform: [
+                        {
+                          rotate: skullRotate,
+                        },
+                      ],
+                    },
+                  ]}
+                  resizeMode="contain"
+                />
+              </View>
+
+              <Text style={styles.loaderText}>
+                Chargement du squelette 3D...
+              </Text>
+            </View>
+          )}
+        </View>
       </StageFrame>
 
       <View style={styles.ctas}>
@@ -93,9 +148,24 @@ export default function HomeScreen() {
 
         <CtaRow
           title="Mode Libre"
-          subtitle="Exploration libre du squelette"
-          icon={<Box size={19} color={colors.ink} strokeWidth={2} />}
-          onPress={() => router.push("/mode-libre")}
+          subtitle={
+            skeletonLoading
+              ? "Chargement du modèle 3D..."
+              : "Exploration libre du squelette"
+          }
+          icon={
+            <Box
+              size={19}
+              color={skeletonLoading ? "#A8AFB4" : colors.ink}
+              strokeWidth={2}
+            />
+          }
+          disabled={skeletonLoading}
+          onPress={() => {
+            if (skeletonLoading) return;
+
+            router.push("/mode-libre");
+          }}
         />
       </View>
     </View>
@@ -141,5 +211,45 @@ const styles = StyleSheet.create({
   ctas: {
     gap: 12,
     paddingBottom: 8,
+  },
+  viewerContainer: {
+    flex: 1,
+    width: "100%",
+  },
+
+  loader: {
+    ...StyleSheet.absoluteFillObject,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    backgroundColor: colors.bg,
+
+    zIndex: 10,
+  },
+
+  loaderAnimationArea: {
+    width: 220,
+    height: 90,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginBottom: 12,
+  },
+
+  loaderSkull: {
+    width: 70,
+    height: 70,
+  },
+
+  loaderText: {
+    fontFamily: "IBMPlexSans_500Medium",
+
+    fontSize: 14,
+
+    color: colors.ink,
+
+    textAlign: "center",
   },
 });

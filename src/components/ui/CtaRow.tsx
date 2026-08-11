@@ -10,6 +10,7 @@ type Props = {
   onPress: () => void;
   variant?: "primary" | "secondary";
   style?: ViewStyle;
+  disabled?: boolean;
 };
 
 export function CtaRow({
@@ -19,16 +20,18 @@ export function CtaRow({
   onPress,
   variant = "secondary",
   style,
+  disabled = false,
 }: Props) {
   const isPrimary = variant === "primary";
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
+      disabled={disabled}
+      style={[
         styles.row,
         isPrimary ? styles.primary : styles.secondary,
-        pressed && { opacity: 0.9 },
         style,
+        disabled && styles.disabled,
       ]}
     >
       <View
@@ -45,14 +48,27 @@ export function CtaRow({
       </View>
       <View style={{ flex: 1 }}>
         <Text
-          style={[typography.rowTitle, isPrimary && { color: colors.surface }]}
+          style={[
+            typography.rowTitle,
+            isPrimary && {
+              color: colors.surface,
+            },
+            disabled && {
+              color: "#8F979D",
+            },
+          ]}
         >
           {title}
         </Text>
         <Text
           style={[
             typography.caption,
-            isPrimary && { color: "rgba(255,255,255,0.75)" },
+            isPrimary && {
+              color: "rgba(255,255,255,0.75)",
+            },
+            disabled && {
+              color: "#A8AFB4",
+            },
           ]}
         >
           {subtitle}
@@ -60,7 +76,7 @@ export function CtaRow({
       </View>
       <ChevronRight
         size={18}
-        color={isPrimary ? colors.surface : colors.muted}
+        color={disabled ? "#A8AFB4" : isPrimary ? colors.surface : colors.muted}
         strokeWidth={2}
       />
     </Pressable>
@@ -90,5 +106,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.iconTile,
     alignItems: "center",
     justifyContent: "center",
+  },
+  disabled: {
+    backgroundColor: "#E8EAEC",
+    borderColor: "#D5D9DC",
   },
 });
