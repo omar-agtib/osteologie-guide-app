@@ -1,5 +1,5 @@
+import { useIsFocused } from "@react-navigation/native";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useIsFocused } from "expo-router";
 import { useMemo, useRef } from "react";
 import { PanResponder, StyleSheet, View } from "react-native";
 import * as THREE from "three";

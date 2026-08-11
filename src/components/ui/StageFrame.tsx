@@ -8,10 +8,11 @@ import { Pill } from "./Pill";
 type Props = {
   children: React.ReactNode;
   radius?: number;
-  flex?: boolean; // fills remaining height (Accueil) vs fixed height (Submodules)
-  fixedHeight?: number; // used when flex=false, e.g. 300 on screen 4
-  warmBottomAlt?: boolean; // screens 3/5 use the slightly cooler bottom stop
-  showControls?: boolean; // rotate/zoom glass buttons, top-right
+  flex?: boolean;
+  fixedHeight?: number;
+  warmBottomAlt?: boolean;
+  showControls?: boolean;
+  transparentBackground?: boolean;
   onReset?: () => void;
   onZoom?: () => void;
   bottomLeftPillLabel?: string;
@@ -26,6 +27,7 @@ export function StageFrame({
   fixedHeight,
   warmBottomAlt = false,
   showControls = true,
+  transparentBackground = false,
   onReset,
   onZoom,
   bottomLeftPillLabel,
@@ -46,13 +48,21 @@ export function StageFrame({
         style,
       ]}
     >
-      <LinearGradient
-        colors={[
-          colors.stageWarmTop,
-          warmBottomAlt ? colors.stageWarmBottomAlt : colors.stageWarmBottom,
-        ]}
-        style={StyleSheet.absoluteFill}
-      />
+      {!transparentBackground && (
+        <>
+          <LinearGradient
+            colors={[
+              colors.stageWarmTop,
+              warmBottomAlt
+                ? colors.stageWarmBottomAlt
+                : colors.stageWarmBottom,
+            ]}
+            style={StyleSheet.absoluteFill}
+          />
+
+          <View pointerEvents="none" style={styles.glow} />
+        </>
+      )}
 
       {/* Radial white glow behind the model */}
       <View pointerEvents="none" style={styles.glow} />
@@ -61,7 +71,9 @@ export function StageFrame({
       <View style={StyleSheet.absoluteFill}>{children}</View>
 
       {/* Contact shadow grounding the model */}
-      <View pointerEvents="none" style={styles.contactShadow} />
+      {!transparentBackground && (
+        <View pointerEvents="none" style={styles.contactShadow} />
+      )}
 
       {showControls && (
         <View style={styles.controlsStack}>
