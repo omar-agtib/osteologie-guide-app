@@ -49,12 +49,16 @@ function SkeletonScene({
   tapRequestRef,
   onBoneSelected,
   onAnnotationChange,
+  onLoaded,
 }: {
+  onLoaded?: () => void;
+
   onAnnotationChange: (data: {
     x: number;
     y: number;
     visible: boolean;
   }) => void;
+
   rotationRef: React.MutableRefObject<Rotation>;
 
   zoomRef: React.MutableRefObject<number>;
@@ -68,7 +72,10 @@ function SkeletonScene({
 
   tapRequestRef: React.MutableRefObject<TapRequest | null>;
 
-  onBoneSelected: (name: string, mesh: THREE.Mesh) => void;
+  onBoneSelected: (
+    name: string,
+    mesh: THREE.Mesh
+  ) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
 
@@ -458,7 +465,10 @@ function SkeletonScene({
 
   return (
     <group ref={groupRef}>
-      <SkeletonModel />
+      <SkeletonModel
+  variant="modeLibre"
+  onLoaded={onLoaded}
+/>
     </group>
   );
 }
@@ -706,7 +716,13 @@ function BoneCallout({
    VIEWER
    ============================================================ */
 
-export default function ModeLibreSkeletonViewer() {
+type Props = {
+  onLoaded?: () => void;
+};
+
+export default function ModeLibreSkeletonViewer({
+  onLoaded,
+}: Props) {
   const [selectedBone, setSelectedBone] = useState<string | null>(null);
   const [selectedBoneMesh, setSelectedBoneMesh] = useState<THREE.Mesh | null>(
     null,
@@ -899,21 +915,25 @@ export default function ModeLibreSkeletonViewer() {
           <directionalLight position={[-5, 3, 2]} intensity={1.5} />
 
           <Suspense fallback={null}>
-            <SkeletonScene
-              rotationRef={rotationRef}
-              zoomRef={zoomRef}
-              cameraOffsetRef={cameraOffsetRef}
-              pinchRef={pinchRef}
-              tapRequestRef={tapRequestRef}
-              onBoneSelected={(name, mesh) => {
-                setSelectedBone(name);
-                setSelectedBoneMesh(mesh);
-              }}
-              onAnnotationChange={(data) => {
-                setAnnotation(data);
-              }}
-            />
-          </Suspense>
+  <SkeletonScene
+    rotationRef={rotationRef}
+    zoomRef={zoomRef}
+    cameraOffsetRef={cameraOffsetRef}
+    pinchRef={pinchRef}
+    tapRequestRef={tapRequestRef}
+
+    onLoaded={onLoaded}
+
+    onBoneSelected={(name, mesh) => {
+      setSelectedBone(name);
+      setSelectedBoneMesh(mesh);
+    }}
+
+    onAnnotationChange={(data) => {
+      setAnnotation(data);
+    }}
+  />
+</Suspense>
         </Canvas>
 
         {selectedBone && annotation && annotation.visible && (
