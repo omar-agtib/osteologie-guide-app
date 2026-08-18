@@ -46,7 +46,10 @@ function SkeletonScene({
 
   return (
     <group ref={groupRef}>
-      <SkeletonModel onLoaded={onLoaded} />
+      <SkeletonModel
+  variant="home"
+  onLoaded={onLoaded}
+/>
     </group>
   );
 }

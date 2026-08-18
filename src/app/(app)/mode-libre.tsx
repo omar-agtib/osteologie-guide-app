@@ -1,13 +1,22 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { ChevronLeft, RotateCcw } from "lucide-react-native";
-import { useState } from "react";
+
 import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  Animated,
+  Image,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ModeLibreSkeletonViewer from "../../components/3d/ModeLibreSkeletonViewer";
@@ -22,8 +31,44 @@ import {
 export default function ModeLibreScreen() {
   const insets = useSafeAreaInsets();
 
+  const [skeletonLoading, setSkeletonLoading] =
+    useState(true);
+
   const [resetKey, setResetKey] =
     useState(0);
+
+  // Animation du loader
+const skullRotation = useRef(
+  new Animated.Value(0)
+).current;
+
+ useEffect(() => {
+  if (!skeletonLoading) {
+    skullRotation.stopAnimation();
+    return;
+  }
+
+  skullRotation.setValue(0);
+
+  const animation = Animated.loop(
+    Animated.timing(skullRotation, {
+      toValue: 1,
+      duration: 1400,
+      useNativeDriver: true,
+    })
+  );
+
+  animation.start();
+
+  return () => {
+    animation.stop();
+  };
+ }, [skeletonLoading, skullRotation]);
+  
+  const rotate = skullRotation.interpolate({
+  inputRange: [0, 1],
+  outputRange: ["0deg", "360deg"],
+});
 
   return (
     <View
@@ -43,7 +88,37 @@ export default function ModeLibreScreen() {
       {/* 3D Skeleton */}
       <ModeLibreSkeletonViewer
         key={resetKey}
+        onLoaded={() =>
+          setSkeletonLoading(false)
+        }
       />
+
+      {/* Loader */}
+      {skeletonLoading && (
+        <View style={styles.loaderContainer}>
+         <Animated.View
+  style={{
+    transform: [
+      {
+        rotate,
+      },
+    ],
+  }}
+>
+            <Image
+              source={require(
+                "../../../assets/images/skeleton-head.png"
+              )}
+              style={styles.loaderImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
+
+          <Text style={styles.loaderText}>
+            Chargement du squelette 3D
+          </Text>
+        </View>
+      )}
 
       {/* Header */}
       <View
@@ -133,5 +208,29 @@ const styles =
       alignItems: "center",
       justifyContent:
         "center",
+    },
+
+    loaderContainer: {
+      ...StyleSheet.absoluteFillObject,
+
+      justifyContent: "center",
+      alignItems: "center",
+
+      backgroundColor:
+        "#FFFFFF",
+
+      zIndex: 5,
+    },
+
+    loaderImage: {
+      width: 110,
+      height: 110,
+      marginBottom: 20,
+    },
+
+    loaderText: {
+      fontSize: 16,
+      fontWeight: "500",
+      color: "#555555",
     },
   });
