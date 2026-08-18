@@ -1,11 +1,11 @@
 import { Canvas, useFrame } from "@react-three/fiber/native";
 
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-
-import { Suspense, useMemo, useRef , useEffect} from "react";
-
-import { StyleSheet, View } from "react-native";
-
+import { Suspense, useMemo, useRef } from "react";
+import {
+  PanResponder,
+  StyleSheet,
+  View,
+} from "react-native";
 import * as THREE from "three";
 
 import SkeletonModel from "./SkeletonModel";
@@ -60,8 +60,8 @@ export function HomeSkeletonViewer({
   onLoaded,
 }: {
   onLoaded?: () => void;
-  }) {
-  
+}) {
+
 
 
   const rotationRef = useRef<Rotation>({
@@ -74,40 +74,54 @@ export function HomeSkeletonViewer({
     y: 0,
   });
 
-  const panGesture = useMemo(
+  const panResponder = useMemo(
     () =>
-      Gesture.Pan()
-        .minPointers(1)
-        .maxPointers(1)
-        .minDistance(4)
-        .runOnJS(true)
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
 
-        .onBegin(() => {
+        onMoveShouldSetPanResponder: () => true,
+
+        onPanResponderGrant: () => {
+          console.log("PAN START");
+
           rotationStartRef.current = {
             ...rotationRef.current,
           };
-        })
+        },
 
-        .onUpdate((event) => {
+        onPanResponderMove: (_, gestureState) => {
           const sensitivity = 0.022;
 
-          // Left / right
           rotationRef.current.y =
-            rotationStartRef.current.y + event.translationX * sensitivity;
+            rotationStartRef.current.y +
+            gestureState.dx * sensitivity;
 
-          // Up / down
           rotationRef.current.x = clamp(
-            rotationStartRef.current.x + event.translationY * sensitivity,
-            -0.7,
-            0.7,
+            rotationStartRef.current.x +
+            gestureState.dy * sensitivity,
+            -1.4,
+            1.4
           );
-        }),
-    [],
+        },
+
+        onPanResponderRelease: () => {
+          console.log("PAN END");
+        },
+
+        onPanResponderTerminate: () => {
+          console.log("PAN TERMINATED");
+        },
+      }),
+    []
   );
 
   return (
-    <GestureDetector gesture={panGesture}>
-      <View style={styles.container}>
+    <View style={styles.container}>
+      {/* 3D rendering */}
+      <View
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      >
         <Canvas
           camera={{
             position: [0, 0, 5],
@@ -119,17 +133,34 @@ export function HomeSkeletonViewer({
         >
           <ambientLight intensity={1.5} />
 
-          <directionalLight position={[5, 5, 5]} intensity={3} />
+          <directionalLight
+            position={[5, 5, 5]}
+            intensity={3}
+          />
 
-          <directionalLight position={[-5, 3, 2]} intensity={1.5} />
+          <directionalLight
+            position={[-5, 3, 2]}
+            intensity={1.5}
+          />
 
           <Suspense fallback={null}>
-            <SkeletonScene rotationRef={rotationRef} onLoaded={onLoaded} />
+            <SkeletonScene
+              rotationRef={rotationRef}
+              onLoaded={onLoaded}
+            />
           </Suspense>
         </Canvas>
       </View>
-    </GestureDetector>
+
+      {/* Touch layer */}
+      <View
+        style={styles.gestureLayer}
+        collapsable={false}
+        {...panResponder.panHandlers}
+      />
+    </View>
   );
+
 }
 
 const styles = StyleSheet.create({
@@ -137,5 +168,9 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
+  },
+
+  gestureLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
