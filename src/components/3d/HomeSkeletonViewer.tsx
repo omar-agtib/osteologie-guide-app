@@ -2,14 +2,13 @@ import { Canvas, useFrame } from "@react-three/fiber/native";
 
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
-import { Suspense, useMemo, useRef , useEffect} from "react";
+import { Suspense, useMemo, useRef } from "react";
 
 import { StyleSheet, View } from "react-native";
 
 import * as THREE from "three";
 
 import SkeletonModel from "./SkeletonModel";
-
 
 type Rotation = {
   x: number;
@@ -46,10 +45,7 @@ function SkeletonScene({
 
   return (
     <group ref={groupRef}>
-      <SkeletonModel
-  variant="home"
-  onLoaded={onLoaded}
-/>
+      <SkeletonModel variant="home" onLoaded={onLoaded} />
     </group>
   );
 }
@@ -59,14 +55,7 @@ function SkeletonScene({
    ROTATION ONLY
    ============================================================ */
 
-export function HomeSkeletonViewer({
-  onLoaded,
-}: {
-  onLoaded?: () => void;
-  }) {
-  
-
-
+export function HomeSkeletonViewer({ onLoaded }: { onLoaded?: () => void }) {
   const rotationRef = useRef<Rotation>({
     x: 0,
     y: 0,
