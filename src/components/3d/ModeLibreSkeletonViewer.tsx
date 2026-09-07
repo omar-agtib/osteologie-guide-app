@@ -1,10 +1,16 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
 
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-
 import { Suspense, useMemo, useRef, useState } from "react";
 
-import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
+
+import {
+  Dimensions,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import * as THREE from "three";
 
@@ -749,6 +755,10 @@ export default function ModeLibreSkeletonViewer({
     y: 0,
   });
 
+
+
+
+
   /* -------------------------
      Zoom
      ------------------------- */
@@ -779,120 +789,334 @@ export default function ModeLibreSkeletonViewer({
   const tapIdRef = useRef(0);
 
   /* ==========================================================
-     ONE FINGER = ROTATION
-     ========================================================== */
+   NATIVE TOUCH STATE
+   Works on Android + iOS
+   ========================================================== */
 
-  const panGesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .minPointers(1)
-        .maxPointers(1)
-        .minDistance(4)
-        .runOnJS(true)
+  const interactionRef = useRef<
+    "none" | "rotate" | "pinch"
+  >("none");
 
-        .onBegin(() => {
-          rotationStartRef.current = {
-            ...rotationRef.current,
-          };
-        })
+  const touchStartRef = useRef({
+    x: 0,
+    y: 0,
+    time: 0,
+    moved: false,
+  });
 
-        .onUpdate((event) => {
-          const sensitivity = 0.022;
+  const pinchStartDistanceRef = useRef(0);
 
-          rotationRef.current.y =
-            rotationStartRef.current.y + event.translationX * sensitivity;
+  const touchResponder = useMemo(() => {
+    type TouchPoint = {
+      locationX: number;
+      locationY: number;
+    };
 
-          rotationRef.current.x = clamp(
-            rotationStartRef.current.x + event.translationY * sensitivity,
-            -1.4,
-            1.4,
+    /* ==========================================
+       START PINCH
+       ========================================== */
+
+    const beginPinch = (
+      touches: readonly TouchPoint[],
+    ) => {
+      if (touches.length < 2) {
+        return;
+      }
+
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+
+      const dx =
+        touch2.locationX - touch1.locationX;
+
+      const dy =
+        touch2.locationY - touch1.locationY;
+
+      const distance = Math.sqrt(
+        dx * dx + dy * dy,
+      );
+
+      const focalX =
+        (touch1.locationX + touch2.locationX) / 2;
+
+      const focalY =
+        (touch1.locationY + touch2.locationY) / 2;
+
+      pinchStartDistanceRef.current = Math.max(
+        distance,
+        1,
+      );
+
+      zoomStartRef.current = zoomRef.current;
+
+      interactionRef.current = "pinch";
+
+      pinchRef.current = {
+        id: pinchRef.current.id + 1,
+
+        active: true,
+
+        focalX,
+        focalY,
+
+        startZoom: zoomRef.current,
+      };
+    };
+
+    return PanResponder.create({
+      /* ==========================================
+         CAPTURE TOUCH
+         ========================================== */
+
+      onStartShouldSetPanResponder: () => true,
+
+      onMoveShouldSetPanResponder: () => true,
+
+      /* ==========================================
+         FIRST FINGER
+         ========================================== */
+
+      onPanResponderGrant: (event) => {
+        const touches =
+          event.nativeEvent.touches;
+
+        if (touches.length >= 2) {
+          beginPinch(touches);
+
+          return;
+        }
+
+        interactionRef.current = "rotate";
+
+        rotationStartRef.current = {
+          ...rotationRef.current,
+        };
+
+        touchStartRef.current = {
+          x: event.nativeEvent.locationX,
+          y: event.nativeEvent.locationY,
+          time: Date.now(),
+          moved: false,
+        };
+      },
+
+      /* ==========================================
+         EXTRA FINGER ADDED
+         ========================================== */
+
+      onPanResponderStart: (event) => {
+        const touches =
+          event.nativeEvent.touches;
+
+        if (touches.length >= 2) {
+          beginPinch(touches);
+        }
+      },
+
+      /* ==========================================
+         MOVE
+         ========================================== */
+
+      onPanResponderMove: (event) => {
+        const touches =
+          event.nativeEvent.touches;
+
+        /* ========================================
+           TWO FINGERS = ZOOM
+           ======================================== */
+
+        if (touches.length >= 2) {
+          if (
+            interactionRef.current !== "pinch"
+          ) {
+            beginPinch(touches);
+          }
+
+          const touch1 = touches[0];
+          const touch2 = touches[1];
+
+          const dx =
+            touch2.locationX -
+            touch1.locationX;
+
+          const dy =
+            touch2.locationY -
+            touch1.locationY;
+
+          const distance = Math.sqrt(
+            dx * dx + dy * dy,
           );
-        }),
-    [],
-  );
 
-  /* ==========================================================
-     TWO FINGERS = ZOOM
-     ========================================================== */
+          const scale =
+            distance /
+            pinchStartDistanceRef.current;
 
-  const pinchGesture = useMemo(
-    () =>
-      Gesture.Pinch()
-        .runOnJS(true)
-
-        .onBegin((event) => {
-          zoomStartRef.current = zoomRef.current;
-
-          pinchRef.current = {
-            id: pinchRef.current.id + 1,
-
-            active: true,
-
-            focalX: event.focalX,
-
-            focalY: event.focalY,
-
-            startZoom: zoomRef.current,
-          };
-        })
-
-        .onUpdate((event) => {
-          const acceleratedScale = Math.pow(event.scale, 1.8);
+          /*
+           * Same acceleration you were using
+           * with Gesture.Pinch()
+           */
+          const acceleratedScale =
+            Math.pow(scale, 1.8);
 
           zoomRef.current = clamp(
-            zoomStartRef.current / acceleratedScale,
+            zoomStartRef.current /
+            acceleratedScale,
             0.8,
             10,
           );
-        })
 
-        .onEnd(() => {
+          return;
+        }
+
+        /* ========================================
+           DON'T ROTATE AFTER A PINCH
+           until fingers are released
+           ======================================== */
+
+        if (
+          interactionRef.current === "pinch"
+        ) {
+          return;
+        }
+
+        /* ========================================
+           ONE FINGER = ROTATION
+           ======================================== */
+
+        if (touches.length === 1) {
+          const touch = touches[0];
+
+          const dx =
+            touch.locationX -
+            touchStartRef.current.x;
+
+          const dy =
+            touch.locationY -
+            touchStartRef.current.y;
+
+          /*
+           * Once finger moved enough,
+           * this interaction is no longer a tap.
+           */
+          if (
+            Math.sqrt(dx * dx + dy * dy) > 8
+          ) {
+            touchStartRef.current.moved = true;
+          }
+
+          const sensitivity = 0.022;
+
+          rotationRef.current.y =
+            rotationStartRef.current.y +
+            dx * sensitivity;
+
+          rotationRef.current.x = clamp(
+            rotationStartRef.current.x +
+            dy * sensitivity,
+            -1.4,
+            1.4,
+          );
+        }
+      },
+
+      /* ==========================================
+         ONE FINGER OF PINCH RELEASED
+         ========================================== */
+
+      onPanResponderEnd: (event) => {
+        if (
+          interactionRef.current === "pinch" &&
+          event.nativeEvent.touches.length < 2
+        ) {
           pinchRef.current.active = false;
-        })
+        }
+      },
 
-        .onFinalize(() => {
+      /* ==========================================
+         ALL FINGERS RELEASED
+         ========================================== */
+
+      onPanResponderRelease: (event) => {
+        /*
+         * End pinch
+         */
+        if (
+          interactionRef.current === "pinch"
+        ) {
           pinchRef.current.active = false;
-        }),
-    [],
-  );
 
-  /* ==========================================================
-     TAP = SELECT BONE
-     ========================================================== */
+          interactionRef.current = "none";
 
-  const tapGesture = useMemo(
-    () =>
-      Gesture.Tap()
-        .maxDistance(8)
-        .maxDuration(250)
-        .runOnJS(true)
+          return;
+        }
 
-        .onEnd((event, success) => {
-          if (!success) return;
+        /*
+         * Check whether this was a TAP
+         */
+        const duration =
+          Date.now() -
+          touchStartRef.current.time;
+
+        const wasTap =
+          !touchStartRef.current.moved &&
+          duration <= 250;
+
+        if (wasTap) {
+          const changedTouch =
+            event.nativeEvent.changedTouches?.[0];
+
+          const x =
+            changedTouch?.locationX ??
+            event.nativeEvent.locationX;
+
+          const y =
+            changedTouch?.locationY ??
+            event.nativeEvent.locationY;
 
           tapIdRef.current += 1;
 
           tapRequestRef.current = {
-            x: event.x,
-            y: event.y,
+            x,
+            y,
             id: tapIdRef.current,
           };
-        }),
-    [],
-  );
+        }
 
-  /* ==========================================================
-     COMBINE
-     ========================================================== */
+        interactionRef.current = "none";
+      },
 
-  const combinedGesture = useMemo(
-    () => Gesture.Simultaneous(panGesture, pinchGesture, tapGesture),
-    [panGesture, pinchGesture, tapGesture],
-  );
+      /* ==========================================
+         TOUCH CANCELLED
+         ========================================== */
+
+      onPanResponderTerminate: () => {
+        pinchRef.current.active = false;
+
+        interactionRef.current = "none";
+      },
+
+      /*
+       * Important on Android:
+       * don't let another native view steal
+       * this interaction once it started.
+       */
+      onPanResponderTerminationRequest:
+        () => false,
+    });
+  }, []);
+
+
 
   return (
-    <GestureDetector gesture={combinedGesture}>
-      <View style={styles.container}>
+    <View style={styles.container}>
+      {/* ======================================
+        3D RENDERING LAYER
+        ====================================== */}
+
+      <View
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      >
         <Canvas
           camera={{
             position: [0, 0, 5],
@@ -910,9 +1134,15 @@ export default function ModeLibreSkeletonViewer({
         >
           <ambientLight intensity={1.5} />
 
-          <directionalLight position={[5, 5, 5]} intensity={3} />
+          <directionalLight
+            position={[5, 5, 5]}
+            intensity={3}
+          />
 
-          <directionalLight position={[-5, 3, 2]} intensity={1.5} />
+          <directionalLight
+            position={[-5, 3, 2]}
+            intensity={1.5}
+          />
 
           <Suspense fallback={null}>
   <SkeletonScene
@@ -935,42 +1165,74 @@ export default function ModeLibreSkeletonViewer({
   />
 </Suspense>
         </Canvas>
+      </View>
 
-        {selectedBone && annotation && annotation.visible && (
+      {/* ======================================
+        TOUCH LAYER
+        ROTATE / ZOOM / SELECT
+        ====================================== */}
+
+      <View
+        style={styles.gestureLayer}
+        collapsable={false}
+        {...touchResponder.panHandlers}
+      />
+
+      {/* ======================================
+        BONE LABEL
+        ====================================== */}
+
+      {selectedBone &&
+        annotation &&
+        annotation.visible && (
           <BoneCallout
-            boneName={formatBoneName(selectedBone)}
+            boneName={formatBoneName(
+              selectedBone,
+            )}
             x={annotation.x}
             y={annotation.y}
           />
         )}
 
-        {selectedBone && selectedBoneMesh && (
-          <Pressable
-            style={styles.detailButton}
-            onPress={() => {
-              setDetailVisible(true);
-            }}
-          >
-            <Text style={styles.detailButtonText}>Voir en détail</Text>
-          </Pressable>
-        )}
+      {/* ======================================
+        DETAIL BUTTON
+        ====================================== */}
 
-        <BoneDetailModal
-          visible={detailVisible}
-          boneName={selectedBone}
-          mesh={selectedBoneMesh}
-          onClose={() => {
-            setDetailVisible(false);
+      {selectedBone && selectedBoneMesh && (
+        <Pressable
+          style={styles.detailButton}
+          onPress={() => {
+            setDetailVisible(true);
           }}
-        />
-      </View>
-    </GestureDetector>
+        >
+          <Text style={styles.detailButtonText}>
+            Voir en détail
+          </Text>
+        </Pressable>
+      )}
+
+      {/* ======================================
+        DETAIL MODAL
+        ====================================== */}
+
+      <BoneDetailModal
+        visible={detailVisible}
+        boneName={selectedBone}
+        mesh={selectedBoneMesh}
+        onClose={() => {
+          setDetailVisible(false);
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  gestureLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
 
   bonePoint: {
