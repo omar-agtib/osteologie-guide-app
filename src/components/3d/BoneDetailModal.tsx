@@ -15,9 +15,10 @@ import BoneDetailModel from "./BoneDetailModel";
 
 import { boneData, BoneInfo } from "../../data/boneData";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { useSkeletonGestures } from "../../hooks/useSkeletonGestures";
 
 import { useFrame } from "@react-three/fiber/native";
 
@@ -104,80 +105,30 @@ export default function BoneDetailModal({
     y: 0,
   });
 
-  const rotationStartRef = useRef<Rotation>({
-    x: 0,
-    y: 0,
-  });
-
   const zoomRef = useRef(1);
-
   const zoomStartRef = useRef(1);
-
-  /* ==========================================================
-   ROTATION - 1 DOIGT
-   ========================================================== */
-
-  const panGesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .minPointers(1)
-        .maxPointers(1)
-        .minDistance(3)
-        .runOnJS(true)
-
-        .onBegin(() => {
-          rotationStartRef.current = {
-            ...rotationRef.current,
-          };
-        })
-
-        .onUpdate((event) => {
-          const sensitivity = 0.015;
-
-          rotationRef.current.y =
-            rotationStartRef.current.y + event.translationX * sensitivity;
-
-          rotationRef.current.x =
-            rotationStartRef.current.x + event.translationY * sensitivity;
-        }),
-    [],
-  );
-
-  /* ==========================================================
-   ZOOM - 2 DOIGTS
-   ========================================================== */
-
-  const pinchGesture = useMemo(
-    () =>
-      Gesture.Pinch()
-        .runOnJS(true)
-
-        .onBegin(() => {
-          zoomStartRef.current = zoomRef.current;
-        })
-
-        .onUpdate((event) => {
-          zoomRef.current = THREE.MathUtils.clamp(
-            zoomStartRef.current * Math.pow(event.scale, 1.2),
-
-            // zoom arrière max
-            0.5,
-
-            // zoom avant max
-            4,
-          );
-        }),
-    [],
-  );
-
-  /* ==========================================================
-   COMBINAISON
-   ========================================================== */
-
-  const combinedGesture = useMemo(
-    () => Gesture.Simultaneous(panGesture, pinchGesture),
-    [panGesture, pinchGesture],
-  );
+  useEffect(() => {
+    if (visible) {
+      rotationRef.current = { x: 0, y: 0 };
+      zoomRef.current = 1;
+    }
+  }, [visible, mesh]);
+  const handlers = useSkeletonGestures({
+    onRotate: (dx, dy) => {
+      rotationRef.current.y += dx * 0.015;
+      rotationRef.current.x += dy * 0.015;
+    },
+    onPinchStart: () => {
+      zoomStartRef.current = zoomRef.current;
+    },
+    onPinch: (scale) => {
+      zoomRef.current = THREE.MathUtils.clamp(
+        zoomStartRef.current * Math.pow(scale, 1.2),
+        0.5,
+        4,
+      );
+    },
+  });
 
   if (!boneName || !mesh) {
     return null;
@@ -194,90 +145,100 @@ export default function BoneDetailModal({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        {/* HEADER */}
-
-        <View style={styles.header}>
-          <Text style={styles.title}>{formattedName}</Text>
-
-          <Pressable onPress={onClose} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
-          </Pressable>
-        </View>
-
-        {/* 3D VIEWER */}
-
-        {/* 3D VIEWER */}
-
-        <GestureDetector gesture={combinedGesture}>
-          <View style={styles.viewer}>
-            <Canvas
-              camera={{
-                position: [0, 0, 3],
-                fov: 45,
-                near: 0.01,
-                far: 1000,
-              }}
-              gl={{
-                antialias: false,
-                alpha: false,
-              }}
-              onCreated={({ gl }) => {
-                gl.setClearColor(0xf5f6f7, 1);
-              }}
-            >
-              <ambientLight intensity={2} />
-
-              <directionalLight position={[5, 5, 5]} intensity={3} />
-
-              <directionalLight position={[-5, 2, 4]} intensity={2} />
-
-              <directionalLight position={[0, -5, 2]} intensity={1} />
-
-              <InteractiveBone
-                mesh={mesh}
-                rotationRef={rotationRef}
-                zoomRef={zoomRef}
-              />
-            </Canvas>
-          </View>
-        </GestureDetector>
-
-        {/* INFORMATIONS */}
-
-        <ScrollView
-          style={styles.infoContainer}
-          contentContainerStyle={styles.infoContent}
+      <SafeAreaProvider>
+        <SafeAreaView
+          style={styles.container}
+          edges={["top", "bottom", "left", "right"]}
         >
-          {info ? (
-            <>
-              <Text style={styles.sectionTitle}>Description</Text>
+          {/* HEADER */}
 
-              <Text style={styles.text}>{info.description}</Text>
+          <View style={styles.header}>
+            <Text style={styles.title}>{formattedName}</Text>
 
-              <Text style={styles.sectionTitle}>Location</Text>
+            <Pressable onPress={onClose} style={styles.closeButton}>
+              <Text style={styles.closeText}>✕</Text>
+            </Pressable>
+          </View>
 
-              <Text style={styles.text}>{info.location}</Text>
+          {/* 3D VIEWER */}
 
-              <Text style={styles.sectionTitle}>Function</Text>
+          {/* 3D VIEWER */}
 
-              <Text style={styles.text}>{info.function}</Text>
+          <View style={styles.viewer}>
+            <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+              <Canvas
+                camera={{
+                  position: [0, 0, 3],
+                  fov: 45,
+                  near: 0.01,
+                  far: 1000,
+                }}
+                gl={{
+                  antialias: false,
+                  alpha: false,
+                }}
+                onCreated={({ gl }) => {
+                  gl.setClearColor(0xf5f6f7, 1);
+                }}
+              >
+                <ambientLight intensity={2} />
 
-              {info.articulations && (
-                <>
-                  <Text style={styles.sectionTitle}>Articulations</Text>
+                <directionalLight position={[5, 5, 5]} intensity={3} />
 
-                  <Text style={styles.text}>{info.articulations}</Text>
-                </>
-              )}
-            </>
-          ) : (
-            <Text style={styles.text}>
-              No information available yet for {formattedName}.
-            </Text>
-          )}
-        </ScrollView>
-      </View>
+                <directionalLight position={[-5, 2, 4]} intensity={2} />
+
+                <directionalLight position={[0, -5, 2]} intensity={1} />
+
+                <InteractiveBone
+                  mesh={mesh}
+                  rotationRef={rotationRef}
+                  zoomRef={zoomRef}
+                />
+              </Canvas>
+            </View>
+            <View
+              collapsable={false}
+              style={StyleSheet.absoluteFill}
+              {...handlers}
+            />
+          </View>
+
+          {/* INFORMATIONS */}
+
+          <ScrollView
+            style={styles.infoContainer}
+            contentContainerStyle={styles.infoContent}
+          >
+            {info ? (
+              <>
+                <Text style={styles.sectionTitle}>Description</Text>
+
+                <Text style={styles.text}>{info.description}</Text>
+
+                <Text style={styles.sectionTitle}>Location</Text>
+
+                <Text style={styles.text}>{info.location}</Text>
+
+                <Text style={styles.sectionTitle}>Function</Text>
+
+                <Text style={styles.text}>{info.function}</Text>
+
+                {info.articulations && (
+                  <>
+                    <Text style={styles.sectionTitle}>Articulations</Text>
+
+                    <Text style={styles.text}>{info.articulations}</Text>
+                  </>
+                )}
+              </>
+            ) : (
+              <Text style={styles.text}>
+                No information available yet for {formattedName}.
+              </Text>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -289,9 +250,8 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 85,
-
-    paddingTop: 35,
+    minHeight: 56,
+    paddingVertical: 8,
     paddingHorizontal: 20,
 
     flexDirection: "row",
@@ -301,6 +261,8 @@ const styles = StyleSheet.create({
   },
 
   title: {
+    flex: 1,
+    marginRight: 12,
     fontSize: 24,
     fontWeight: "800",
 
@@ -326,7 +288,8 @@ const styles = StyleSheet.create({
   },
 
   viewer: {
-    height: 330,
+    flex: 1,
+    maxHeight: 330,
 
     backgroundColor: "#F5F6F7",
   },

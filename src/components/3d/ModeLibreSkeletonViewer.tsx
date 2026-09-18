@@ -1,10 +1,12 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
 
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useSkeletonGestures } from "../../hooks/useSkeletonGestures";
+import { SkeletonLoader } from "../ui/SkeletonLoader";
+import { colors } from "../../constants/theme";
 
 import { Suspense, useMemo, useRef, useState } from "react";
 
-import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import * as THREE from "three";
 
@@ -13,6 +15,8 @@ import SkeletonModel from "./SkeletonModel";
 import BoneDetailModal from "./BoneDetailModal";
 
 import { ArrowRight } from "lucide-react-native";
+
+const overviewAsset = require("../../../assets/models/overview-skeleton-mobile.glb");
 
 type Rotation = {
   x: number;
@@ -49,7 +53,9 @@ function SkeletonScene({
   tapRequestRef,
   onBoneSelected,
   onAnnotationChange,
+  onLoaded,
 }: {
+  onLoaded: () => void;
   onAnnotationChange: (data: {
     x: number;
     y: number;
@@ -155,6 +161,8 @@ function SkeletonScene({
     group.rotation.x = rotationRef.current.x;
 
     group.rotation.y = rotationRef.current.y;
+
+    group.updateWorldMatrix(true, true);
 
     /* =========================
        FOCAL ZOOM
@@ -458,7 +466,7 @@ function SkeletonScene({
 
   return (
     <group ref={groupRef}>
-      <SkeletonModel />
+      <SkeletonModel asset={overviewAsset} onLoaded={onLoaded} />
     </group>
   );
 }
@@ -509,15 +517,15 @@ function BoneCallout({
   boneName,
   x,
   y,
+  width: screenWidth,
+  height: screenHeight,
 }: {
+  width: number;
+  height: number;
   boneName: string;
   x: number;
   y: number;
 }) {
-  const screenWidth = Dimensions.get("window").width;
-
-  const screenHeight = Dimensions.get("window").height;
-
   const [labelSize, setLabelSize] = useState({
     width: 100,
     height: 34,
@@ -574,15 +582,18 @@ function BoneCallout({
      KEEP LABEL INSIDE SCREEN
      ========================================== */
 
-  labelX = clamp(labelX, margin, screenWidth - labelSize.width - margin);
+  labelX = clamp(
+    labelX,
+    margin,
+    Math.max(margin, screenWidth - labelSize.width - margin),
+  );
 
   labelY = clamp(
     labelY,
 
-    // évite le header Mode Libre
-    100,
+    margin,
 
-    screenHeight - labelSize.height - 25,
+    Math.max(margin, screenHeight - labelSize.height - 90),
   );
 
   /* ==========================================
@@ -692,6 +703,7 @@ function BoneCallout({
           {
             left: labelX,
             top: labelY,
+            maxWidth: Math.min(170, Math.max(1, screenWidth - margin * 2)),
           },
         ]}
       >
@@ -707,6 +719,8 @@ function BoneCallout({
    ============================================================ */
 
 export default function ModeLibreSkeletonViewer() {
+  const [loading, setLoading] = useState(true);
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [selectedBone, setSelectedBone] = useState<string | null>(null);
   const [selectedBoneMesh, setSelectedBoneMesh] = useState<THREE.Mesh | null>(
     null,
@@ -724,11 +738,6 @@ export default function ModeLibreSkeletonViewer() {
      ------------------------- */
 
   const rotationRef = useRef<Rotation>({
-    x: 0,
-    y: 0,
-  });
-
-  const rotationStartRef = useRef<Rotation>({
     x: 0,
     y: 0,
   });
@@ -762,121 +771,49 @@ export default function ModeLibreSkeletonViewer() {
 
   const tapIdRef = useRef(0);
 
-  /* ==========================================================
-     ONE FINGER = ROTATION
-     ========================================================== */
-
-  const panGesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .minPointers(1)
-        .maxPointers(1)
-        .minDistance(4)
-        .runOnJS(true)
-
-        .onBegin(() => {
-          rotationStartRef.current = {
-            ...rotationRef.current,
-          };
-        })
-
-        .onUpdate((event) => {
-          const sensitivity = 0.022;
-
-          rotationRef.current.y =
-            rotationStartRef.current.y + event.translationX * sensitivity;
-
-          rotationRef.current.x = clamp(
-            rotationStartRef.current.x + event.translationY * sensitivity,
-            -1.4,
-            1.4,
-          );
-        }),
-    [],
-  );
-
-  /* ==========================================================
-     TWO FINGERS = ZOOM
-     ========================================================== */
-
-  const pinchGesture = useMemo(
-    () =>
-      Gesture.Pinch()
-        .runOnJS(true)
-
-        .onBegin((event) => {
-          zoomStartRef.current = zoomRef.current;
-
-          pinchRef.current = {
-            id: pinchRef.current.id + 1,
-
-            active: true,
-
-            focalX: event.focalX,
-
-            focalY: event.focalY,
-
-            startZoom: zoomRef.current,
-          };
-        })
-
-        .onUpdate((event) => {
-          const acceleratedScale = Math.pow(event.scale, 1.8);
-
-          zoomRef.current = clamp(
-            zoomStartRef.current / acceleratedScale,
-            0.8,
-            10,
-          );
-        })
-
-        .onEnd(() => {
-          pinchRef.current.active = false;
-        })
-
-        .onFinalize(() => {
-          pinchRef.current.active = false;
-        }),
-    [],
-  );
-
-  /* ==========================================================
-     TAP = SELECT BONE
-     ========================================================== */
-
-  const tapGesture = useMemo(
-    () =>
-      Gesture.Tap()
-        .maxDistance(8)
-        .maxDuration(250)
-        .runOnJS(true)
-
-        .onEnd((event, success) => {
-          if (!success) return;
-
-          tapIdRef.current += 1;
-
-          tapRequestRef.current = {
-            x: event.x,
-            y: event.y,
-            id: tapIdRef.current,
-          };
-        }),
-    [],
-  );
-
-  /* ==========================================================
-     COMBINE
-     ========================================================== */
-
-  const combinedGesture = useMemo(
-    () => Gesture.Simultaneous(panGesture, pinchGesture, tapGesture),
-    [panGesture, pinchGesture, tapGesture],
-  );
+  const handlers = useSkeletonGestures({
+    onRotate: (dx, dy) => {
+      rotationRef.current.y += dx * 0.022;
+      rotationRef.current.x = clamp(
+        rotationRef.current.x + dy * 0.022,
+        -1.4,
+        1.4,
+      );
+    },
+    onTap: ({ x, y }) => {
+      tapRequestRef.current = { x, y, id: ++tapIdRef.current };
+    },
+    onPinchStart: ({ x, y }) => {
+      zoomStartRef.current = zoomRef.current;
+      pinchRef.current = {
+        id: pinchRef.current.id + 1,
+        active: true,
+        focalX: x,
+        focalY: y,
+        startZoom: zoomRef.current,
+      };
+    },
+    onPinch: (scale) => {
+      zoomRef.current = clamp(
+        zoomStartRef.current / Math.pow(scale, 1.8),
+        0.8,
+        10,
+      );
+    },
+    onPinchEnd: () => {
+      pinchRef.current.active = false;
+    },
+  });
 
   return (
-    <GestureDetector gesture={combinedGesture}>
-      <View style={styles.container}>
+    <View
+      style={styles.container}
+      onLayout={({ nativeEvent }) => {
+        const { width, height } = nativeEvent.layout;
+        setViewport({ width, height });
+      }}
+    >
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <Canvas
           camera={{
             position: [0, 0, 5],
@@ -900,6 +837,7 @@ export default function ModeLibreSkeletonViewer() {
 
           <Suspense fallback={null}>
             <SkeletonScene
+              onLoaded={() => setLoading(false)}
               rotationRef={rotationRef}
               zoomRef={zoomRef}
               cameraOffsetRef={cameraOffsetRef}
@@ -915,36 +853,41 @@ export default function ModeLibreSkeletonViewer() {
             />
           </Suspense>
         </Canvas>
-
-        {selectedBone && annotation && annotation.visible && (
-          <BoneCallout
-            boneName={formatBoneName(selectedBone)}
-            x={annotation.x}
-            y={annotation.y}
-          />
-        )}
-
-        {selectedBone && selectedBoneMesh && (
-          <Pressable
-            style={styles.detailButton}
-            onPress={() => {
-              setDetailVisible(true);
-            }}
-          >
-            <Text style={styles.detailButtonText}>Voir en détail</Text>
-          </Pressable>
-        )}
-
-        <BoneDetailModal
-          visible={detailVisible}
-          boneName={selectedBone}
-          mesh={selectedBoneMesh}
-          onClose={() => {
-            setDetailVisible(false);
-          }}
-        />
       </View>
-    </GestureDetector>
+      <View collapsable={false} style={StyleSheet.absoluteFill} {...handlers} />
+
+      {selectedBone && annotation && annotation.visible && (
+        <BoneCallout
+          width={viewport.width}
+          height={viewport.height}
+          boneName={formatBoneName(selectedBone)}
+          x={annotation.x}
+          y={annotation.y}
+        />
+      )}
+
+      {selectedBone && selectedBoneMesh && (
+        <Pressable
+          style={styles.detailButton}
+          onPress={() => {
+            setDetailVisible(true);
+          }}
+        >
+          <Text style={styles.detailButtonText}>Voir en détail</Text>
+        </Pressable>
+      )}
+
+      {loading && <SkeletonLoader backgroundColor={colors.stageWarmTop} />}
+
+      <BoneDetailModal
+        visible={detailVisible}
+        boneName={selectedBone}
+        mesh={selectedBoneMesh}
+        onClose={() => {
+          setDetailVisible(false);
+        }}
+      />
+    </View>
   );
 }
 

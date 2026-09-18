@@ -1,12 +1,13 @@
 import { router } from "expo-router";
 import { BookOpen, Box } from "lucide-react-native";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HomeSkeletonViewer } from "../../../components/3d/HomeSkeletonViewer";
+import { SkeletonLoader } from "../../../components/ui/SkeletonLoader";
 import { CtaRow } from "../../../components/ui/CtaRow";
 import { StageFrame } from "../../../components/ui/StageFrame";
 
@@ -28,34 +29,11 @@ function initialsFrom(name: string | null) {
 }
 
 export default function HomeScreen() {
-  const skullRotation = useRef(new Animated.Value(0)).current;
-
   const { user } = useAuth();
 
   const insets = useSafeAreaInsets();
 
   const [skeletonLoading, setSkeletonLoading] = useState(true);
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.timing(skullRotation, {
-        toValue: 1,
-        duration: 1800,
-        useNativeDriver: true,
-      }),
-    );
-
-    animation.start();
-
-    return () => {
-      animation.stop();
-    };
-  }, [skullRotation]);
-
-  const skullRotate = skullRotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
 
   const greetLabel = useMemo(() => greeting(new Date().getHours()), []);
 
@@ -110,30 +88,7 @@ export default function HomeScreen() {
             }}
           />
 
-          {skeletonLoading && (
-            <View style={styles.loader}>
-              <View style={styles.loaderAnimationArea}>
-                <Animated.Image
-                  source={require("../../../../assets/images/skeleton-head.png")}
-                  style={[
-                    styles.loaderSkull,
-                    {
-                      transform: [
-                        {
-                          rotate: skullRotate,
-                        },
-                      ],
-                    },
-                  ]}
-                  resizeMode="contain"
-                />
-              </View>
-
-              <Text style={styles.loaderText}>
-                Chargement du squelette 3D...
-              </Text>
-            </View>
-          )}
+          {skeletonLoading && <SkeletonLoader />}
         </View>
       </StageFrame>
 
@@ -215,41 +170,6 @@ const styles = StyleSheet.create({
   viewerContainer: {
     flex: 1,
     width: "100%",
-  },
-
-  loader: {
-    ...StyleSheet.absoluteFillObject,
-
-    alignItems: "center",
-    justifyContent: "center",
-
-    backgroundColor: colors.bg,
-
-    zIndex: 10,
-  },
-
-  loaderAnimationArea: {
-    width: 220,
-    height: 90,
-
-    alignItems: "center",
-    justifyContent: "center",
-
-    marginBottom: 12,
-  },
-
-  loaderSkull: {
-    width: 70,
-    height: 70,
-  },
-
-  loaderText: {
-    fontFamily: "IBMPlexSans_500Medium",
-
-    fontSize: 14,
-
-    color: colors.ink,
-
-    textAlign: "center",
+    position: "relative",
   },
 });

@@ -2,7 +2,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { RotateCcw, ZoomIn } from "lucide-react-native";
 import React from "react";
 import {
-  Image,
+  Pressable,
+  type ViewStyle,
   StyleSheet,
   Text,
   View,

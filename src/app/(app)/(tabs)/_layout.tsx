@@ -1,8 +1,10 @@
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Tabs } from "expo-router";
 import { Grid2x2, Home, User } from "lucide-react-native";
 import { colors } from "../../../constants/theme";
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -12,7 +14,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.borderSoft,
-          height: 58,
+          height: 58 + insets.bottom,
+          paddingBottom: insets.bottom,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
           fontFamily: "IBMPlexSans_600SemiBold",
