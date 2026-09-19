@@ -12,11 +12,13 @@ import {
   spacing,
   typography,
 } from "../../../../../constants/theme";
+import { useAuth } from "../../../../../lib/auth-context";
 import { ZONE_DETAILS } from "../../../../../lib/bones-data";
+import { saveQuizResult } from "../../../../../lib/firestore";
 import { QUIZ_QUESTIONS } from "../../../../../lib/quiz-data";
-
 export default function QuizScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { zoneKey } = useLocalSearchParams<{ zoneKey: string }>();
   const zone = (zoneKey as ZoneKey) ?? "sup";
   const detail = ZONE_DETAILS[zone] ?? ZONE_DETAILS.sup;
@@ -24,34 +26,94 @@ export default function QuizScreen() {
   const questions = QUIZ_QUESTIONS[zone] ?? [];
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
+
+  const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [savingResult, setSavingResult] = useState(false);
+
+  const [resultSaved, setResultSaved] = useState(false);
+
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const current = questions[currentIndex];
   const isLast = currentIndex === questions.length - 1;
-  const hasAnswered = selectedIndex !== null;
+  const hasSelection = selectedIndexes.length > 0;
 
-  const handleSelect = (i: number) => {
-    if (hasAnswered) return; // lock in the first answer
-    setSelectedIndex(i);
-    if (i === current.correctIndex) setScore((s) => s + 1);
+  const handleSelect = (index: number) => {
+    if (submitted) return;
+
+    setSelectedIndexes((currentSelected) => {
+      if (currentSelected.includes(index)) {
+        return currentSelected.filter((value) => value !== index);
+      }
+
+      return [...currentSelected, index];
+    });
   };
 
-  const handleNext = () => {
-    if (isLast) {
-      setFinished(true);
+  const handleValidate = () => {
+    if (submitted || selectedIndexes.length === 0) {
       return;
     }
+
+    const selected = [...selectedIndexes].sort((a, b) => a - b);
+
+    const correct = [...current.correctIndexes].sort((a, b) => a - b);
+
+    const isCorrect =
+      selected.length === correct.length &&
+      selected.every((value, index) => value === correct[index]);
+
+    if (isCorrect) {
+      setScore((currentScore) => currentScore + 1);
+    }
+
+    setSubmitted(true);
+  };
+
+  const handleNext = async () => {
+    if (isLast) {
+      setSavingResult(true);
+      setSaveError(null);
+
+      try {
+        if (!user) {
+          throw new Error("Utilisateur non connecté");
+        }
+
+        await saveQuizResult(user.uid, zone, score, questions.length);
+
+        setResultSaved(true);
+      } catch (error) {
+        console.error("Erreur sauvegarde quiz :", error);
+
+        setResultSaved(false);
+
+        setSaveError("Le résultat n'a pas pu être sauvegardé.");
+      } finally {
+        setSavingResult(false);
+        setFinished(true);
+      }
+
+      return;
+    }
+
     setCurrentIndex((i) => i + 1);
-    setSelectedIndex(null);
+    setSelectedIndexes([]);
+    setSubmitted(false);
   };
 
   const handleRetry = () => {
     setCurrentIndex(0);
-    setSelectedIndex(null);
+    setSelectedIndexes([]);
+    setSubmitted(false);
     setScore(0);
     setFinished(false);
+
+    setResultSaved(false);
+    setSaveError(null);
   };
 
   if (questions.length === 0) {
@@ -99,6 +161,11 @@ export default function QuizScreen() {
             ? "Bien joué ! Vous maîtrisez ce sous-module."
             : "Continuez à réviser ce sous-module."}
         </Text>
+        {resultSaved && (
+          <Text style={styles.saveSuccess}>Résultat enregistré</Text>
+        )}
+
+        {saveError && <Text style={styles.saveError}>{saveError}</Text>}
         <View
           style={{
             flexDirection: "row",
@@ -149,22 +216,34 @@ export default function QuizScreen() {
 
       <View style={styles.content}>
         <Text style={styles.eyebrow}>{detail.eyebrow}</Text>
-        <Text
-          style={[typography.cardTitle, { marginTop: 8, marginBottom: 28 }]}
-        >
+        <Text style={[typography.cardTitle, { marginTop: 8, marginBottom: 8 }]}>
           {current.question}
+        </Text>
+
+        <Text style={styles.instruction}>
+          Une ou plusieurs réponses peuvent être correctes.
         </Text>
 
         <View style={{ gap: 12 }}>
           {current.options.map((option, i) => {
-            const isSelected = selectedIndex === i;
-            const isCorrect = i === current.correctIndex;
+            const isSelected = selectedIndexes.includes(i);
+
+            const isCorrect = current.correctIndexes.includes(i);
+
             let stateStyle = styles.optionIdle;
-            if (hasAnswered) {
-              if (isCorrect) stateStyle = styles.optionCorrect;
-              else if (isSelected) stateStyle = styles.optionWrong;
-              else stateStyle = styles.optionDisabled;
+
+            if (submitted) {
+              if (isCorrect) {
+                stateStyle = styles.optionCorrect;
+              } else if (isSelected) {
+                stateStyle = styles.optionWrong;
+              } else {
+                stateStyle = styles.optionDisabled;
+              }
+            } else if (isSelected) {
+              stateStyle = styles.optionSelected;
             }
+
             return (
               <Pressable
                 key={i}
@@ -174,12 +253,14 @@ export default function QuizScreen() {
                 <Text
                   style={[
                     styles.optionText,
-                    hasAnswered &&
+
+                    submitted &&
                       isCorrect && {
                         color: "#1B8A5A",
                         fontFamily: "IBMPlexSans_600SemiBold",
                       },
-                    hasAnswered &&
+
+                    submitted &&
                       isSelected &&
                       !isCorrect && {
                         color: "#C33C2E",
@@ -189,10 +270,12 @@ export default function QuizScreen() {
                 >
                   {option}
                 </Text>
-                {hasAnswered && isCorrect && (
+
+                {submitted && isCorrect && (
                   <Check size={18} color="#1B8A5A" strokeWidth={2.5} />
                 )}
-                {hasAnswered && isSelected && !isCorrect && (
+
+                {submitted && isSelected && !isCorrect && (
                   <X size={18} color="#C33C2E" strokeWidth={2.5} />
                 )}
               </Pressable>
@@ -201,13 +284,39 @@ export default function QuizScreen() {
         </View>
       </View>
 
-      {hasAnswered && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 18 }]}>
-          <Button
-            label={isLast ? "Voir les résultats" : "Question suivante"}
-            onPress={handleNext}
-            style={{ backgroundColor: accent.color }}
-          />
+      {hasSelection && (
+        <View
+          style={[
+            styles.footer,
+            {
+              paddingBottom: insets.bottom + 18,
+            },
+          ]}
+        >
+          {!submitted ? (
+            <Button
+              label="Valider ma réponse"
+              onPress={handleValidate}
+              style={{
+                backgroundColor: accent.color,
+              }}
+            />
+          ) : (
+            <Button
+              label={
+                savingResult
+                  ? "Sauvegarde..."
+                  : isLast
+                    ? "Voir les résultats"
+                    : "Question suivante"
+              }
+              disabled={savingResult}
+              onPress={handleNext}
+              style={{
+                backgroundColor: accent.color,
+              }}
+            />
+          )}
         </View>
       )}
     </View>
@@ -281,6 +390,18 @@ const styles = StyleSheet.create({
     color: colors.ink,
     flex: 1,
   },
+
+  optionSelected: {
+    backgroundColor: "#F3F6FA",
+    borderColor: colors.ink,
+  },
+
+  instruction: {
+    fontFamily: "IBMPlexSans_400Regular",
+    fontSize: 13,
+    color: colors.muted,
+    marginBottom: 20,
+  },
   footer: { paddingHorizontal: spacing.screenX, paddingTop: 12 },
   resultIconTile: {
     width: 88,
@@ -304,5 +425,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  retryText: { display: "none" }, // icon-only button, label kept for accessibility tooling
+  retryText: { display: "none" },
+  saveSuccess: {
+    marginTop: 12,
+    fontFamily: "IBMPlexSans_500Medium",
+    fontSize: 13,
+    color: "#1B8A5A",
+    textAlign: "center",
+  },
+
+  saveError: {
+    marginTop: 12,
+    fontFamily: "IBMPlexSans_500Medium",
+    fontSize: 13,
+    color: "#C33C2E",
+    textAlign: "center",
+  },
 });

@@ -27,7 +27,11 @@ import {
 } from "../../../../constants/theme";
 import { useAuth } from "../../../../lib/auth-context";
 import { ZONE_DETAILS } from "../../../../lib/bones-data";
-import { markBoneViewed } from "../../../../lib/firestore";
+import {
+  markBoneViewed,
+  QuizResult,
+  subscribeToQuizResult,
+} from "../../../../lib/firestore";
 // Default selected bone per zone, matching the README's example (Humérus, 3/6 for sup)
 const DEFAULT_BONE_INDEX: Record<ZoneKey, number> = { sup: 2, ax: 0, inf: 0 };
 
@@ -59,9 +63,22 @@ export default function SubmoduleDetailScreen() {
   const selectedBone = detail.bones[selectedIndex];
   const { user } = useAuth();
 
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+
   React.useEffect(() => {
     if (user) markBoneViewed(user.uid, zone, selectedBone.id);
   }, [user, zone, selectedBone.id]);
+
+  React.useEffect(() => {
+    if (!user) {
+      setQuizResult(null);
+      return;
+    }
+
+    const unsubscribe = subscribeToQuizResult(user.uid, zone, setQuizResult);
+
+    return unsubscribe;
+  }, [user, zone]);
 
   const onStageLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -176,7 +193,7 @@ export default function SubmoduleDetailScreen() {
       </View>
 
       {/* Bottom sheet — drag up to expand */}
-      <DraggableSheet collapsedHeight={190} expandedHeight={420}>
+      <DraggableSheet collapsedHeight={285} expandedHeight={480}>
         <View style={styles.sheetHeaderRow}>
           <Text style={typography.sheetTitle}>{selectedBone.name}</Text>
           <Text style={styles.counter}>
@@ -186,11 +203,68 @@ export default function SubmoduleDetailScreen() {
         <Text style={[typography.body, { marginTop: 6, marginBottom: 18 }]}>
           {selectedBone.description}
         </Text>
+        <View style={styles.quizStatsCard}>
+          <View style={styles.quizStatsHeader}>
+            <Text style={styles.quizStatsTitle}>Quiz</Text>
+
+            {quizResult && (
+              <Text
+                style={[
+                  styles.quizStatsPercent,
+                  {
+                    color: accent.color,
+                  },
+                ]}
+              >
+                {quizResult.bestPercent}%
+              </Text>
+            )}
+          </View>
+
+          {quizResult ? (
+            <View style={styles.quizStatsRow}>
+              <View style={styles.quizStatItem}>
+                <Text style={styles.quizStatLabel}>Meilleur score</Text>
+
+                <Text style={styles.quizStatValue}>
+                  {quizResult.bestScore}/{quizResult.bestTotal}
+                </Text>
+              </View>
+
+              <View style={styles.quizStatDivider} />
+
+              <View style={styles.quizStatItem}>
+                <Text style={styles.quizStatLabel}>Tentatives</Text>
+
+                <Text style={styles.quizStatValue}>{quizResult.attempts}</Text>
+              </View>
+
+              <View style={styles.quizStatDivider} />
+
+              <View style={styles.quizStatItem}>
+                <Text style={styles.quizStatLabel}>Dernier score</Text>
+
+                <Text style={styles.quizStatValue}>
+                  {quizResult.lastScore}/{quizResult.lastTotal}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.quizNoResult}>
+              Aucun quiz terminé pour le moment.
+            </Text>
+          )}
+        </View>
         <View style={styles.sheetActions}>
           <Button
             label="Quiz du sous-module"
-            onPress={() => router.push(`/modules/osteologie/quiz/${zone}`)}
-            style={[styles.quizBtn, { backgroundColor: accent.color }]}
+            onPress={() => router.push(`/modules/osteologie/quiz-prep/${zone}`)}
+            style={[
+              styles.quizBtn,
+              {
+                backgroundColor: accent.color,
+              },
+            ]}
           />
           <Pressable style={styles.bookmarkBtn} hitSlop={8}>
             <Bookmark size={19} color={colors.ink} strokeWidth={2} />
@@ -293,5 +367,65 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
+  },
+  quizStatsCard: {
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: colors.fillSoft,
+  },
+
+  quizStatsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  quizStatsTitle: {
+    fontFamily: "IBMPlexSans_600SemiBold",
+    fontSize: 14,
+    color: colors.ink,
+  },
+
+  quizStatsPercent: {
+    fontFamily: "IBMPlexSans_700Bold",
+    fontSize: 15,
+  },
+
+  quizStatsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  quizStatItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+
+  quizStatLabel: {
+    fontFamily: "IBMPlexSans_400Regular",
+    fontSize: 10.5,
+    color: colors.muted,
+    textAlign: "center",
+  },
+
+  quizStatValue: {
+    marginTop: 4,
+    fontFamily: "IBMPlexSans_700Bold",
+    fontSize: 16,
+    color: colors.ink,
+  },
+
+  quizStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: colors.border,
+  },
+
+  quizNoResult: {
+    fontFamily: "IBMPlexSans_400Regular",
+    fontSize: 13,
+    color: colors.muted,
   },
 });
