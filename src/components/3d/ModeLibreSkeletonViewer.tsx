@@ -1,8 +1,8 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
 
+import { colors } from "../../constants/theme";
 import { useSkeletonGestures } from "../../hooks/useSkeletonGestures";
 import { SkeletonLoader } from "../ui/SkeletonLoader";
-import { colors } from "../../constants/theme";
 
 import { Suspense, useMemo, useRef, useState } from "react";
 
@@ -16,7 +16,12 @@ import BoneDetailModal from "./BoneDetailModal";
 
 import { ArrowRight } from "lucide-react-native";
 
-const overviewAsset = require("../../../assets/models/overview-skeleton-mobile.glb");
+import {
+  getBoneDisplayNameFr,
+  getBoneMetadataFr,
+} from "../../data/boneData.fr";
+
+const skeletonAsset = require("../../../assets/models/skeleton_core206_complete_fr.glb");
 
 type Rotation = {
   x: number;
@@ -110,6 +115,7 @@ function SkeletonScene({
   const lastTapId = useRef(0);
 
   const selectedMeshRef = useRef<THREE.Mesh | null>(null);
+  const selectedRegionMeshesRef = useRef<THREE.Mesh[]>([]);
 
   const selectedAnchorLocalRef = useRef(new THREE.Vector3());
 
@@ -378,29 +384,86 @@ function SkeletonScene({
 
     const mesh = firstMesh.object as THREE.Mesh;
 
-    /* Restore previous bone */
+    /* ==========================================================
+   RESTORE PREVIOUS SELECTION
+   ========================================================== */
 
-    if (selectedMeshRef.current) {
-      const previous = selectedMeshRef.current;
-
+    selectedRegionMeshesRef.current.forEach((previous) => {
       const original = originalMaterialsRef.current.get(previous.uuid);
 
       if (original) {
         previous.material = original;
       }
+    });
+
+    selectedRegionMeshesRef.current = [];
+
+    /* ==========================================================
+   SELECT BONE OR SPINE REGION
+   ========================================================== */
+
+const selectedMetadata = getBoneMetadataFr(mesh.name);
+
+const selectedMeshes: THREE.Mesh[] = [];
+
+if (selectedMetadata?.vertebralRegion) {
+  /*
+   * The selected object belongs to the spine.
+   * Select every vertebra from the same anatomical region.
+   *
+   * CERVICAL   -> C1-C7
+   * THORACIC   -> T1-T12
+   * LUMBAR     -> L1-L5
+   * SACRAL     -> Sacrum
+   * COCCYGEAL  -> Coccyx
+   */
+  group.traverse((object) => {
+    if (!(object as THREE.Mesh).isMesh) {
+      return;
     }
 
-    /* Save original material */
+    const candidateMesh = object as THREE.Mesh;
 
-    if (!originalMaterialsRef.current.has(mesh.uuid)) {
-      originalMaterialsRef.current.set(mesh.uuid, mesh.material);
+    const candidateMetadata = getBoneMetadataFr(
+      candidateMesh.name,
+    );
+
+    if (
+      candidateMetadata?.vertebralRegion ===
+      selectedMetadata.vertebralRegion
+    ) {
+      selectedMeshes.push(candidateMesh);
     }
+  });
+} else {
+  /*
+   * Outside the spine:
+   * preserve the current behavior.
+   */
+  selectedMeshes.push(mesh);
+}
 
-    /* Selected bone -> yellow */
+/*
+ * Save original materials and highlight everything selected.
+ */
+selectedMeshes.forEach((selected) => {
+  if (!originalMaterialsRef.current.has(selected.uuid)) {
+    originalMaterialsRef.current.set(
+      selected.uuid,
+      selected.material,
+    );
+  }
 
-    mesh.material = yellowMaterial;
+  selected.material = yellowMaterial;
+});
 
-    selectedMeshRef.current = mesh;
+selectedRegionMeshesRef.current = selectedMeshes;
+
+/*
+ * Keep the exact clicked bone as the main selected bone.
+ * This is important for annotation, zoom and detail modal.
+ */
+selectedMeshRef.current = mesh;
 
     /*
      * Find the center of the selected bone.
@@ -421,6 +484,8 @@ function SkeletonScene({
     tempWorldPosition.copy(selectedAnchorLocalRef.current);
 
     mesh.localToWorld(tempWorldPosition);
+
+    console.log("BONE CLICKED:", mesh.name);
 
     onBoneSelected(mesh.name || "Unknown bone", mesh);
 
@@ -466,51 +531,19 @@ function SkeletonScene({
 
   return (
     <group ref={groupRef}>
-      <SkeletonModel asset={overviewAsset} onLoaded={onLoaded} />
+      <SkeletonModel asset={skeletonAsset} onLoaded={onLoaded} />
     </group>
   );
 }
 
-/* ============================================================
-   CLEAN BONE NAME
-   ============================================================ */
+function getSelectionDisplayName(objectName: string) {
+  const metadata = getBoneMetadataFr(objectName);
 
-function formatBoneName(name: string) {
-  const lower = name.toLowerCase();
+  if (metadata?.vertebralRegion) {
+    return metadata.regionFr;
+  }
 
-  if (lower.includes("clavicle")) return "Clavicle";
-
-  if (lower.includes("femur")) return "Femur";
-
-  if (lower.includes("fibula")) return "Fibula";
-
-  if (lower.includes("humerus")) return "Humerus";
-
-  if (lower.includes("patella")) return "Patella";
-
-  if (lower.includes("radial") || lower.includes("radius")) return "Radius";
-
-  if (lower.includes("scapula")) return "Scapula";
-
-  if (lower.includes("skull")) return "Skull";
-
-  if (lower.includes("jaw")) return "Mandible";
-
-  if (lower.includes("ulna")) return "Ulna";
-
-  if (lower.includes("tibia")) return "Tibia";
-
-  if (lower.includes("pelvis")) return "Pelvis";
-
-  if (lower.includes("rib")) return "Rib Cage";
-
-  if (lower.includes("spinal")) return "Spine";
-
-  return name
-    .replace(/^human_/i, "")
-    .replace(/_\d+/g, "")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return getBoneDisplayNameFr(objectName);
 }
 
 function BoneCallout({
@@ -860,7 +893,7 @@ export default function ModeLibreSkeletonViewer() {
         <BoneCallout
           width={viewport.width}
           height={viewport.height}
-          boneName={formatBoneName(selectedBone)}
+          boneName={getSelectionDisplayName(selectedBone)}
           x={annotation.x}
           y={annotation.y}
         />
