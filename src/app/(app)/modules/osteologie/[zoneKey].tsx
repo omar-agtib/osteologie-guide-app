@@ -11,9 +11,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  SkeletonViewer,
+  LearningSkeletonViewer,
   ZoneKey,
-} from "../../../../components/3d/SkeletonViewer";
+} from "../../../../components/3d/LearningSkeletonViewer";
 import { Button } from "../../../../components/ui/Button";
 import { DraggableSheet } from "../../../../components/ui/DraggableSheet";
 import { PillToggle } from "../../../../components/ui/PillToggle";
@@ -123,12 +123,12 @@ export default function SubmoduleDetailScreen() {
           colors={[colors.stageWarmTop, colors.stageWarmBottomAlt]}
           style={StyleSheet.absoluteFill}
         />
-        <SkeletonViewer
-          activeZone={zone}
-          accentColor={accent.color}
-          interactive
-          framing="small"
-        />
+        <LearningSkeletonViewer
+  activeZone={zone}
+  accentColor="#E53935"
+  interactive
+  framing="small"
+/>
 
         {/* Bone label chips + leader lines */}
         {labelsVisible &&
