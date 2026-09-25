@@ -1,12 +1,12 @@
-import { router } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 import { useState } from "react";
+
+import {
+  LearningSkeletonViewer,
+  ZoneKey,
+} from "../../../../components/3d/LearningSkeletonViewer";import { router } from "expo-router";
+import { ChevronLeft } from "lucide-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  SkeletonViewer,
-  ZoneKey,
-} from "../../../../components/3d/SkeletonViewer";
 import { StageFrame } from "../../../../components/ui/StageFrame";
 import { SubmoduleRow } from "../../../../components/ui/SubmoduleRow";
 import {
@@ -74,21 +74,21 @@ export default function OsteologieSubmodulesScreen() {
         <Text style={typography.headerTitle}>Ostéologie</Text>
       </View>
 
-      <StageFrame
-        flex={false}
-        fixedHeight={300}
-        warmBottomAlt
-        showControls={false}
-        topLeftPillLabel={`Zone : ${activeSubmodule.zoneLabel}`}
-        style={styles.stage}
-      >
-        <SkeletonViewer
-          activeZone={activeZone}
-          accentColor={activeAccent.color}
-          interactive={false}
-          framing="small"
-        />
-      </StageFrame>
+    <StageFrame
+  flex={false}
+  fixedHeight={300}
+  warmBottomAlt
+  showControls={false}
+  topLeftPillLabel={`Zone : ${activeSubmodule.zoneLabel}`}
+  style={styles.stage}
+>
+  <LearningSkeletonViewer
+  activeZone={activeZone}
+  accentColor="#E53935"
+  interactive
+  framing="small"
+/>
+</StageFrame>
 
       <ScrollView contentContainerStyle={styles.list}>
         <Text style={styles.eyebrow}>SOUS-MODULES</Text>
