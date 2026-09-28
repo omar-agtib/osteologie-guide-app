@@ -31,9 +31,9 @@ export const accents = {
     borderActive: "#E7C4BE",
     glow: "0 8px 20px rgba(195,60,46,0.12)",
   },
-  dark: {
+  yellow: {
     // Squelette Axial
-    color: "#2B3138",
+    color: "#F4B400",
     tintBg: "#F6F7F8",
     chipBg: "#ECEEF0",
     borderActive: "#C8CDD2",

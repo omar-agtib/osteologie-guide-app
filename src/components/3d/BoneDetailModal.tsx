@@ -15,12 +15,23 @@ import BoneDetailModel from "./BoneDetailModel";
 
 import { boneData, BoneInfo } from "../../data/boneData";
 
-import { useEffect, useRef } from "react";
-
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useSkeletonGestures } from "../../hooks/useSkeletonGestures";
 
 import { useFrame } from "@react-three/fiber/native";
+
+import AnatomicalDetailViewer, {
+  AnatomicalLandmark,
+} from "./AnatomicalDetailViewer";
+
+import {
+  getDetailModel,
+} from "../../data/detailModels";
 
 type Props = {
   visible: boolean;
@@ -61,6 +72,8 @@ function formatBoneName(name: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+
+
 type Rotation = {
   x: number;
   y: number;
@@ -100,19 +113,36 @@ export default function BoneDetailModal({
   mesh,
   onClose,
 }: Props) {
-  const rotationRef = useRef<Rotation>({
-    x: 0,
-    y: 0,
-  });
+  const [
+    selectedLandmark,
+    setSelectedLandmark,
+  ] =
+    useState<AnatomicalLandmark | null>(
+      null,
+    );
+
+  const rotationRef =
+    useRef<Rotation>({
+      x: 0,
+      y: 0,
+    });
 
   const zoomRef = useRef(1);
   const zoomStartRef = useRef(1);
   useEffect(() => {
-    if (visible) {
-      rotationRef.current = { x: 0, y: 0 };
-      zoomRef.current = 1;
-    }
-  }, [visible, mesh]);
+  if (visible) {
+    rotationRef.current = {
+      x: 0,
+      y: 0,
+    };
+
+    zoomRef.current = 1;
+
+    setSelectedLandmark(
+      null,
+    );
+  }
+}, [visible, mesh]);
   const handlers = useSkeletonGestures({
     onRotate: (dx, dy) => {
       rotationRef.current.y += dx * 0.015;
@@ -134,9 +164,18 @@ export default function BoneDetailModal({
     return null;
   }
 
-  const formattedName = formatBoneName(boneName);
+const formattedName =
+  formatBoneName(boneName);
 
-  const info: BoneInfo | undefined = boneData[formattedName];
+const detailModel =
+  getDetailModel(
+    formattedName,
+  );
+
+const info:
+  | BoneInfo
+  | undefined =
+  boneData[formattedName];
 
   return (
     <Modal
@@ -164,44 +203,114 @@ export default function BoneDetailModal({
 
           {/* 3D VIEWER */}
 
-          <View style={styles.viewer}>
-            <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-              <Canvas
-                camera={{
-                  position: [0, 0, 3],
-                  fov: 45,
-                  near: 0.01,
-                  far: 1000,
-                }}
-                gl={{
-                  antialias: false,
-                  alpha: false,
-                }}
-                onCreated={({ gl }) => {
-                  gl.setClearColor(0xf5f6f7, 1);
-                }}
-              >
-                <ambientLight intensity={2} />
+         <View style={styles.viewer}>
+  {detailModel ? (
+    <AnatomicalDetailViewer
+      modelAsset={
+        detailModel.asset
+      }
 
-                <directionalLight position={[5, 5, 5]} intensity={3} />
+      initialRotation={
+        detailModel.initialRotation
+      }
 
-                <directionalLight position={[-5, 2, 4]} intensity={2} />
+      onLandmarkPress={(
+        landmark,
+      ) => {
+        setSelectedLandmark(
+          landmark,
+        );
+      }}
+    />
+  ) : (
+    <>
+      <View
+        pointerEvents="none"
+        style={
+          StyleSheet.absoluteFill
+        }
+      >
+        <Canvas
+          camera={{
+            position: [
+              0,
+              0,
+              3,
+            ],
 
-                <directionalLight position={[0, -5, 2]} intensity={1} />
+            fov: 45,
 
-                <InteractiveBone
-                  mesh={mesh}
-                  rotationRef={rotationRef}
-                  zoomRef={zoomRef}
-                />
-              </Canvas>
-            </View>
-            <View
-              collapsable={false}
-              style={StyleSheet.absoluteFill}
-              {...handlers}
-            />
-          </View>
+            near: 0.01,
+
+            far: 1000,
+          }}
+          gl={{
+            antialias: false,
+
+            alpha: false,
+          }}
+          onCreated={({
+            gl,
+          }) => {
+            gl.setClearColor(
+              0xf5f6f7,
+              1,
+            );
+          }}
+        >
+          <ambientLight
+            intensity={2}
+          />
+
+          <directionalLight
+            position={[
+              5,
+              5,
+              5,
+            ]}
+            intensity={3}
+          />
+
+          <directionalLight
+            position={[
+              -5,
+              2,
+              4,
+            ]}
+            intensity={2}
+          />
+
+          <directionalLight
+            position={[
+              0,
+              -5,
+              2,
+            ]}
+            intensity={1}
+          />
+
+          <InteractiveBone
+            mesh={mesh}
+            rotationRef={
+              rotationRef
+            }
+            zoomRef={
+              zoomRef
+            }
+          />
+        </Canvas>
+      </View>
+
+      <View
+        collapsable={false}
+        style={
+          StyleSheet.absoluteFill
+        }
+        {...handlers}
+      />
+    </>
+  )}
+</View>
 
           {/* INFORMATIONS */}
 
@@ -209,6 +318,55 @@ export default function BoneDetailModal({
             style={styles.infoContainer}
             contentContainerStyle={styles.infoContent}
           >
+            {selectedLandmark && (
+  <View
+    style={
+      styles.landmarkCard
+    }
+  >
+    <View
+      style={
+        styles.landmarkHeader
+      }
+    >
+      <View
+        style={
+          styles.landmarkNumber
+        }
+      >
+        <Text
+          style={
+            styles.landmarkNumberText
+          }
+        >
+          {
+            selectedLandmark.numero
+          }
+        </Text>
+      </View>
+
+      <Text
+        style={
+          styles.landmarkTitle
+        }
+      >
+        {
+          selectedLandmark.nom
+        }
+      </Text>
+    </View>
+
+    <Text
+      style={
+        styles.landmarkDescription
+      }
+    >
+      {
+        selectedLandmark.description
+      }
+    </Text>
+  </View>
+)}
             {info ? (
               <>
                 <Text style={styles.sectionTitle}>Description</Text>
@@ -319,4 +477,71 @@ const styles = StyleSheet.create({
 
     color: "#58636B",
   },
+  landmarkCard: {
+  marginBottom: 12,
+
+  padding: 16,
+
+  borderRadius: 14,
+
+  backgroundColor:
+    "#FFF9DE",
+
+  borderWidth: 1,
+
+  borderColor:
+    "#E8D68A",
+},
+
+landmarkHeader: {
+  flexDirection: "row",
+
+  alignItems: "center",
+
+  marginBottom: 10,
+},
+
+landmarkNumber: {
+  width: 34,
+
+  height: 34,
+
+  marginRight: 10,
+
+  borderRadius: 17,
+
+  backgroundColor:
+    "#FFD700",
+
+  alignItems: "center",
+
+  justifyContent:
+    "center",
+},
+
+landmarkNumberText: {
+  color: "#27323A",
+
+  fontSize: 14,
+
+  fontWeight: "900",
+},
+
+landmarkTitle: {
+  flex: 1,
+
+  color: "#27323A",
+
+  fontSize: 17,
+
+  fontWeight: "800",
+},
+
+landmarkDescription: {
+  color: "#58636B",
+
+  fontSize: 14,
+
+  lineHeight: 21,
+},
 });

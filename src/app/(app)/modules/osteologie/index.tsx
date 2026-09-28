@@ -36,7 +36,7 @@ const SUBMODULES: Submodule[] = [
   },
   {
     zoneKey: "ax",
-    accentKey: "dark",
+    accentKey: "yellow",
     title: "Squelette Axial",
     subtitle: "80 os · crâne, rachis, thorax",
     zoneLabel: "Axial",
@@ -82,9 +82,9 @@ export default function OsteologieSubmodulesScreen() {
   topLeftPillLabel={`Zone : ${activeSubmodule.zoneLabel}`}
   style={styles.stage}
 >
-  <LearningSkeletonViewer
+<LearningSkeletonViewer
   activeZone={activeZone}
-  accentColor="#E53935"
+  accentColor={activeAccent.color}
   interactive
   framing="small"
 />
