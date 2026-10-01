@@ -402,68 +402,63 @@ function SkeletonScene({
    SELECT BONE OR SPINE REGION
    ========================================================== */
 
-const selectedMetadata = getBoneMetadataFr(mesh.name);
+    const selectedMetadata = getBoneMetadataFr(mesh.name);
 
-const selectedMeshes: THREE.Mesh[] = [];
+    const selectedMeshes: THREE.Mesh[] = [];
 
-if (selectedMetadata?.vertebralRegion) {
-  /*
-   * The selected object belongs to the spine.
-   * Select every vertebra from the same anatomical region.
-   *
-   * CERVICAL   -> C1-C7
-   * THORACIC   -> T1-T12
-   * LUMBAR     -> L1-L5
-   * SACRAL     -> Sacrum
-   * COCCYGEAL  -> Coccyx
-   */
-  group.traverse((object) => {
-    if (!(object as THREE.Mesh).isMesh) {
-      return;
+    if (selectedMetadata?.vertebralRegion) {
+      /*
+       * The selected object belongs to the spine.
+       * Select every vertebra from the same anatomical region.
+       *
+       * CERVICAL   -> C1-C7
+       * THORACIC   -> T1-T12
+       * LUMBAR     -> L1-L5
+       * SACRAL     -> Sacrum
+       * COCCYGEAL  -> Coccyx
+       */
+      group.traverse((object) => {
+        if (!(object as THREE.Mesh).isMesh) {
+          return;
+        }
+
+        const candidateMesh = object as THREE.Mesh;
+
+        const candidateMetadata = getBoneMetadataFr(candidateMesh.name);
+
+        if (
+          candidateMetadata?.vertebralRegion ===
+          selectedMetadata.vertebralRegion
+        ) {
+          selectedMeshes.push(candidateMesh);
+        }
+      });
+    } else {
+      /*
+       * Outside the spine:
+       * preserve the current behavior.
+       */
+      selectedMeshes.push(mesh);
     }
 
-    const candidateMesh = object as THREE.Mesh;
+    /*
+     * Save original materials and highlight everything selected.
+     */
+    selectedMeshes.forEach((selected) => {
+      if (!originalMaterialsRef.current.has(selected.uuid)) {
+        originalMaterialsRef.current.set(selected.uuid, selected.material);
+      }
 
-    const candidateMetadata = getBoneMetadataFr(
-      candidateMesh.name,
-    );
+      selected.material = yellowMaterial;
+    });
 
-    if (
-      candidateMetadata?.vertebralRegion ===
-      selectedMetadata.vertebralRegion
-    ) {
-      selectedMeshes.push(candidateMesh);
-    }
-  });
-} else {
-  /*
-   * Outside the spine:
-   * preserve the current behavior.
-   */
-  selectedMeshes.push(mesh);
-}
+    selectedRegionMeshesRef.current = selectedMeshes;
 
-/*
- * Save original materials and highlight everything selected.
- */
-selectedMeshes.forEach((selected) => {
-  if (!originalMaterialsRef.current.has(selected.uuid)) {
-    originalMaterialsRef.current.set(
-      selected.uuid,
-      selected.material,
-    );
-  }
-
-  selected.material = yellowMaterial;
-});
-
-selectedRegionMeshesRef.current = selectedMeshes;
-
-/*
- * Keep the exact clicked bone as the main selected bone.
- * This is important for annotation, zoom and detail modal.
- */
-selectedMeshRef.current = mesh;
+    /*
+     * Keep the exact clicked bone as the main selected bone.
+     * This is important for annotation, zoom and detail modal.
+     */
+    selectedMeshRef.current = mesh;
 
     /*
      * Find the center of the selected bone.
@@ -846,49 +841,56 @@ export default function ModeLibreSkeletonViewer() {
         setViewport({ width, height });
       }}
     >
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <Canvas
-          camera={{
-            position: [0, 0, 5],
-            fov: 45,
-            near: 0.1,
-            far: 100,
-          }}
-          gl={{
-            antialias: false,
-            alpha: true,
-          }}
-          onCreated={({ gl }) => {
-            gl.setClearColor(0x000000, 0);
-          }}
-        >
-          <ambientLight intensity={1.5} />
-
-          <directionalLight position={[5, 5, 5]} intensity={3} />
-
-          <directionalLight position={[-5, 3, 2]} intensity={1.5} />
-
-          <Suspense fallback={null}>
-            <SkeletonScene
-              onLoaded={() => setLoading(false)}
-              rotationRef={rotationRef}
-              zoomRef={zoomRef}
-              cameraOffsetRef={cameraOffsetRef}
-              pinchRef={pinchRef}
-              tapRequestRef={tapRequestRef}
-              onBoneSelected={(name, mesh) => {
-                setSelectedBone(name);
-                setSelectedBoneMesh(mesh);
+      {!detailVisible && (
+        <>
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <Canvas
+              camera={{
+                position: [0, 0, 5],
+                fov: 45,
+                near: 0.1,
+                far: 100,
               }}
-              onAnnotationChange={(data) => {
-                setAnnotation(data);
+              gl={{
+                antialias: false,
+                alpha: true,
               }}
-            />
-          </Suspense>
-        </Canvas>
-      </View>
-      <View collapsable={false} style={StyleSheet.absoluteFill} {...handlers} />
+              onCreated={({ gl }) => {
+                gl.setClearColor(0x000000, 0);
+              }}
+            >
+              <ambientLight intensity={1.5} />
 
+              <directionalLight position={[5, 5, 5]} intensity={3} />
+
+              <directionalLight position={[-5, 3, 2]} intensity={1.5} />
+
+              <Suspense fallback={null}>
+                <SkeletonScene
+                  onLoaded={() => setLoading(false)}
+                  rotationRef={rotationRef}
+                  zoomRef={zoomRef}
+                  cameraOffsetRef={cameraOffsetRef}
+                  pinchRef={pinchRef}
+                  tapRequestRef={tapRequestRef}
+                  onBoneSelected={(name, mesh) => {
+                    setSelectedBone(name);
+                    setSelectedBoneMesh(mesh);
+                  }}
+                  onAnnotationChange={(data) => {
+                    setAnnotation(data);
+                  }}
+                />
+              </Suspense>
+            </Canvas>
+          </View>
+          <View
+            collapsable={false}
+            style={StyleSheet.absoluteFill}
+            {...handlers}
+          />
+        </>
+      )}
       {selectedBone && annotation && annotation.visible && (
         <BoneCallout
           width={viewport.width}

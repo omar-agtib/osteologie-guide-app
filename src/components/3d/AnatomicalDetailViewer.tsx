@@ -1,29 +1,33 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
-
-import { useGLTF } from "@react-three/drei/native";
-
-import { Suspense, useMemo, useRef, useState } from "react";
-
+import { Asset } from "expo-asset";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-
 import * as THREE from "three";
+import { GLTFLoader } from "three-stdlib";
 
+import * as FileSystem from "expo-file-system/legacy";
+import type {
+  DetailModelAxis,
+  DetailModelFeatures,
+  DetailModelView,
+} from "../../data/detailModels";
 import { useSkeletonGestures } from "../../hooks/useSkeletonGestures";
-
+import { SkeletonLoader } from "../ui/SkeletonLoader";
+import { LinearGradient } from "expo-linear-gradient";
 /* ============================================================
    TYPES
    ============================================================ */
-
-type Rotation = {
-  x: number;
-  y: number;
-};
 
 export type AnatomicalLandmark = {
   numero: number;
   id: string;
   nom: string;
   description: string;
+
+  // Optional anatomical zone along the bone:
+  // 0 = lateral end
+  // 1 = medial end
+  zone_t?: [number, number];
 
   x: number;
   y: number;
@@ -39,30 +43,83 @@ type Props = {
     y: number;
   };
 
+  longitudinalAxis?: DetailModelAxis;
+
+  views?: DetailModelView[];
+
+  features?: DetailModelFeatures;
+
   onLandmarkPress?: (landmark: AnatomicalLandmark) => void;
+  onInteractionChange?: (interacting: boolean) => void;
 };
+
+const DEFAULT_ZOOM = 0.5;
+
+type OrientationLabels = {
+  top: string;
+  bottom: string;
+  left: string;
+  right: string;
+};
+
+
 
 /* ============================================================
    3D SCENE
    ============================================================ */
 
+   function CameraFollowingLight() {
+  const lightRef = useRef<THREE.DirectionalLight>(null);
+  const { camera } = useThree();
+
+  useFrame(() => {
+    if (!lightRef.current) return;
+
+    lightRef.current.position.copy(camera.position);
+    lightRef.current.target.position.set(0, 0, 0);
+    lightRef.current.target.updateMatrixWorld();
+  });
+
+  return (
+    <directionalLight
+      ref={lightRef}
+      intensity={1.8}
+      color="#FFFFFF"
+    />
+  );
+}
+
 function AnatomicalScene({
-  modelAsset,
+  loadedScene,
   rotationRef,
   zoomRef,
   onMarkersChange,
+  onLoaded,
+  selectedNumber,
+  longitudinalAxis,
+  requestedViewRef,
+  mirrored,
+  onOrientationChange,
 }: {
-  modelAsset: number;
+  loadedScene: THREE.Group;
 
-  rotationRef: React.MutableRefObject<Rotation>;
+  rotationRef: React.MutableRefObject<THREE.Quaternion>;
 
   zoomRef: React.MutableRefObject<number>;
 
   onMarkersChange: (markers: AnatomicalLandmark[]) => void;
-}) {
-  const gltf = useGLTF(modelAsset);
 
+  onLoaded: () => void;
+
+  selectedNumber: number | null;
+  longitudinalAxis: DetailModelAxis;
+  requestedViewRef: React.MutableRefObject<DetailModelView | null>;
+  mirrored: boolean;
+  onOrientationChange: (labels: OrientationLabels) => void;
+}) {
   const groupRef = useRef<THREE.Group>(null);
+
+  const lastRequestedViewRef = useRef<string | null>(null);
 
   const { camera, size } = useThree();
 
@@ -73,46 +130,82 @@ function AnatomicalScene({
      ---------------------------------------------------------- */
 
   const scene = useMemo(() => {
-    return gltf.scene.clone(true);
-  }, [gltf.scene]);
+    const cloned = loadedScene.clone(true);
 
-  useMemo(() => {
-    console.log("========== DETAIL MODEL MATERIALS ==========");
+    /*
+     * Keep the detailed model reliable on native GL.
+     * We do not replace its materials because the GLB
+     * contains its own vertex colors/material configuration.
+     */
+    cloned.traverse((object: any) => {
+      if (!object.isMesh) {
+        return;
+      }
 
-    scene.traverse((object: any) => {
-  if (!object.isMesh) {
-    return;
-  }
+      object.frustumCulled = false;
 
-  const materials = Array.isArray(object.material)
-    ? object.material
-    : [object.material];
+      // Each detailed model may contain vertex colors.
+      // Clone the geometry so highlighting never modifies
+      // the original GLB geometry.
+      object.geometry = object.geometry.clone();
 
-      materials.forEach((material: any, index) => {
-        console.log("MESH:", object.name);
-        console.log("MATERIAL:", material?.name);
-        console.log("TYPE:", material?.type);
+      const colorAttribute = object.geometry.getAttribute("color");
 
-        console.log("COLOR:", material?.color?.getHexString?.());
+      if (colorAttribute) {
+        const originalColors = new Float32Array(colorAttribute.count * 3);
 
-        console.log("BASE COLOR MAP:", material?.map ? "YES" : "NONE");
+        for (let i = 0; i < colorAttribute.count; i++) {
+          originalColors[i * 3] = colorAttribute.getX(i);
 
-        console.log("NORMAL MAP:", material?.normalMap ? "YES" : "NONE");
+          originalColors[i * 3 + 1] = colorAttribute.getY(i);
 
-        console.log("ROUGHNESS:", material?.roughness);
+          originalColors[i * 3 + 2] = colorAttribute.getZ(i);
+        }
 
-        console.log("ROUGHNESS MAP:", material?.roughnessMap ? "YES" : "NONE");
+        // Keep an untouched copy.
+        object.userData.originalVertexColors = originalColors;
 
-        console.log("AO MAP:", material?.aoMap ? "YES" : "NONE");
+        // Use a Float32 color buffer for runtime highlighting.
+        object.geometry.setAttribute(
+          "color",
+          new THREE.BufferAttribute(originalColors.slice(), 3),
+        );
+      }
 
-        console.log("METALNESS:", material?.metalness);
+      // Save the GLB's original vertex colors.
+      // We use these to restore the bone when another
+      // landmark is selected.
 
-        console.log("-----------------------------");
+      const materials = Array.isArray(object.material)
+        ? object.material
+        : [object.material];
+
+      materials.forEach((material: any) => {
+        if (!material) {
+          return;
+        }
+
+        material.transparent = false;
+        material.opacity = 1;
+        material.depthWrite = true;
+        material.depthTest = true;
+        material.needsUpdate = true;
       });
     });
 
-    return null;
-  }, [scene]);
+    return cloned;
+  }, [loadedScene]);
+
+  /* ----------------------------------------------------------
+     MODEL IS READY
+     ---------------------------------------------------------- */
+
+  useEffect(() => {
+    console.log("DETAIL SCENE: model ready inside Canvas");
+
+    onLoaded();
+  }, [scene, onLoaded]);
+
   /* ----------------------------------------------------------
      FIND LANDMARKS
 
@@ -121,6 +214,7 @@ function AnatomicalScene({
      userData.numero
      userData.nom
      userData.description
+     userData.normale
      ---------------------------------------------------------- */
 
   const landmarks = useMemo(() => {
@@ -129,6 +223,8 @@ function AnatomicalScene({
       id: string;
       nom: string;
       description: string;
+
+      zone_t?: [number, number];
 
       normal: THREE.Vector3 | null;
 
@@ -160,6 +256,11 @@ function AnatomicalScene({
 
         description: data.description ?? "",
 
+        zone_t:
+          Array.isArray(data.zone_t) && data.zone_t.length >= 2
+            ? [Number(data.zone_t[0]), Number(data.zone_t[1])]
+            : undefined,
+
         normal,
 
         object,
@@ -175,6 +276,154 @@ function AnatomicalScene({
 
     return result;
   }, [scene]);
+
+  const selectedLandmark = useMemo(() => {
+    if (selectedNumber === null) {
+      return null;
+    }
+
+    return (
+      landmarks.find((landmark) => landmark.numero === selectedNumber) ?? null
+    );
+  }, [landmarks, selectedNumber]);
+
+  const selectedZone = selectedLandmark?.zone_t ?? null;
+
+  // ======================================================
+  // LONGITUDINAL RANGE OF THE DETAILED MODEL
+  // ======================================================
+
+  const getAxisValue = useCallback(
+    (attribute: THREE.BufferAttribute, index: number) => {
+      switch (longitudinalAxis) {
+        case "y":
+          return attribute.getY(index);
+
+        case "z":
+          return attribute.getZ(index);
+
+        case "x":
+        default:
+          return attribute.getX(index);
+      }
+    },
+    [longitudinalAxis],
+  );
+
+  const longitudinalRange = useMemo(() => {
+    let min = Infinity;
+    let max = -Infinity;
+
+    scene.traverse((object: any) => {
+      if (!object.isMesh) {
+        return;
+      }
+
+      const position = object.geometry?.getAttribute("position");
+
+      if (!position) {
+        return;
+      }
+
+      for (let i = 0; i < position.count; i++) {
+        const value = getAxisValue(position as THREE.BufferAttribute, i);
+
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+    });
+
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      return null;
+    }
+
+    return {
+      min,
+      max,
+      length: max - min,
+    };
+  }, [scene, getAxisValue]);
+
+  // ======================================================
+  // SELECTED ZONE HIGHLIGHT
+  // ======================================================
+
+  useEffect(() => {
+    const highlightColor = new THREE.Color("#F2C94C");
+
+    scene.traverse((object: any) => {
+      if (!object.isMesh) {
+        return;
+      }
+
+      const geometry = object.geometry as THREE.BufferGeometry;
+
+      const position = geometry.getAttribute("position");
+
+      const color = geometry.getAttribute("color");
+
+      const originalColors = object.userData.originalVertexColors as
+        | Float32Array
+        | undefined;
+
+      if (!position || !color || !originalColors) {
+        return;
+      }
+
+      // ----------------------------------------
+      // Always restore the original GLB colors.
+      // ----------------------------------------
+
+      for (let i = 0; i < color.count; i++) {
+        color.setXYZ(
+          i,
+          originalColors[i * 3],
+          originalColors[i * 3 + 1],
+          originalColors[i * 3 + 2],
+        );
+      }
+
+      // No zone_t = normal landmark.
+      // Original colors remain untouched.
+      if (
+        !selectedZone ||
+        !longitudinalRange ||
+        longitudinalRange.length <= 0
+      ) {
+        color.needsUpdate = true;
+        return;
+      }
+
+      // ----------------------------------------
+      // Apply the selected anatomical zone.
+      // ----------------------------------------
+
+      for (let i = 0; i < position.count; i++) {
+        const axisValue = getAxisValue(position as THREE.BufferAttribute, i);
+
+        const t =
+          (axisValue - longitudinalRange.min) / longitudinalRange.length;
+
+        if (t < selectedZone[0] || t > selectedZone[1]) {
+          continue;
+        }
+
+        const originalColor = new THREE.Color(
+          originalColors[i * 3],
+          originalColors[i * 3 + 1],
+          originalColors[i * 3 + 2],
+        );
+
+        // Client specification:
+        // yellow #F2C94C, 72% blend.
+        originalColor.lerp(highlightColor, 0.72);
+
+        color.setXYZ(i, originalColor.r, originalColor.g, originalColor.b);
+      }
+
+      color.needsUpdate = true;
+    });
+  }, [scene, selectedZone, longitudinalRange, getAxisValue]);
 
   /* ----------------------------------------------------------
      CENTER + NORMALIZE MODEL
@@ -195,9 +444,13 @@ function AnatomicalScene({
      * Every detailed bone gets normalized
      * to approximately the same viewer size.
      */
-
     const targetSize = 3.4;
+
     const scale = maxDimension > 0 ? targetSize / maxDimension : 1;
+
+    console.log("DETAIL MODEL DIMENSIONS:", dimensions.toArray());
+
+    console.log("DETAIL MODEL SCALE:", scale);
 
     return {
       center,
@@ -206,6 +459,7 @@ function AnatomicalScene({
   }, [scene]);
 
   const worldPosition = useMemo(() => new THREE.Vector3(), []);
+
   const worldNormal = useMemo(() => new THREE.Vector3(), []);
 
   const cameraDirection = useMemo(() => new THREE.Vector3(), []);
@@ -214,6 +468,46 @@ function AnatomicalScene({
 
   const projectedPosition = useMemo(() => new THREE.Vector3(), []);
 
+
+  const inverseModelMatrix = useMemo(() => new THREE.Matrix4(), []);
+
+  const cameraRightWorld = useMemo(() => new THREE.Vector3(), []);
+
+  const cameraUpWorld = useMemo(() => new THREE.Vector3(), []);
+
+  const localRight = useMemo(() => new THREE.Vector3(), []);
+
+  const localLeft = useMemo(() => new THREE.Vector3(), []);
+
+  const localTop = useMemo(() => new THREE.Vector3(), []);
+
+  const localBottom = useMemo(() => new THREE.Vector3(), []);
+
+  const getDirectionName = useCallback((direction: THREE.Vector3) => {
+    const x = direction.x;
+    const y = direction.y;
+    const z = direction.z;
+
+    const absX = Math.abs(x);
+    const absY = Math.abs(y);
+    const absZ = Math.abs(z);
+
+    const threshold = 0.8;
+
+    if (absX >= absY && absX >= absZ && absX >= threshold) {
+      return x > 0 ? "MÉDIAL" : "LATÉRAL";
+    }
+
+    if (absY >= absX && absY >= absZ && absY >= threshold) {
+      return y > 0 ? "SUPÉRIEUR" : "INFÉRIEUR";
+    }
+
+    if (absZ >= absX && absZ >= absY && absZ >= threshold) {
+      return z > 0 ? "ANTÉRIEUR" : "POSTÉRIEUR";
+    }
+
+    return "";
+  }, []);
   /* ----------------------------------------------------------
      ANIMATION + 3D -> SCREEN
      ---------------------------------------------------------- */
@@ -225,18 +519,86 @@ function AnatomicalScene({
       return;
     }
 
+    const requestedView = requestedViewRef.current;
+
+    if (requestedView && requestedView.id !== lastRequestedViewRef.current) {
+      lastRequestedViewRef.current = requestedView.id;
+
+      const direction = new THREE.Vector3(
+        ...requestedView.cameraDirection,
+      ).normalize();
+
+      const up = new THREE.Vector3(...requestedView.cameraUp).normalize();
+
+      const distance = 4;
+
+      if (requestedView.id !== "__reset__") {
+        rotationRef.current.identity();
+      }
+
+      camera.position.copy(direction.multiplyScalar(distance));
+
+      camera.up.copy(up);
+
+      camera.lookAt(0, 0, 0);
+
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld(true);
+    }
+
     /* Rotation */
 
-    group.rotation.x = rotationRef.current.x;
-
-    group.rotation.y = rotationRef.current.y;
+    group.quaternion.copy(rotationRef.current);
 
     /* Zoom */
 
-    group.scale.setScalar(modelData.scale * zoomRef.current);
+    const scale = modelData.scale * zoomRef.current;
+
+    group.scale.set(mirrored ? -scale : scale, scale, scale);
 
     group.updateWorldMatrix(true, true);
 
+    camera.updateMatrixWorld(true);
+
+    /*
+     * Camera screen axes in world coordinates.
+     *
+     * matrixWorld:
+     * column 0 = screen right
+     * column 1 = screen up
+     */
+    cameraRightWorld
+      .set(
+        camera.matrixWorld.elements[0],
+        camera.matrixWorld.elements[1],
+        camera.matrixWorld.elements[2],
+      )
+      .normalize();
+
+    cameraUpWorld
+      .set(
+        camera.matrixWorld.elements[4],
+        camera.matrixWorld.elements[5],
+        camera.matrixWorld.elements[6],
+      )
+      .normalize();
+
+    /*
+     * Convert screen directions from world space
+     * back into the bone's anatomical/local space.
+     *
+     * This is the important part.
+     */
+    inverseModelMatrix.copy(group.matrixWorld).invert();
+
+    localRight.copy(cameraRightWorld).transformDirection(inverseModelMatrix);
+
+    localTop.copy(cameraUpWorld).transformDirection(inverseModelMatrix);
+
+    localLeft.copy(localRight).multiplyScalar(-1);
+
+    localBottom.copy(localTop).multiplyScalar(-1);
+   
     /*
      * Don't update React labels
      * on every single frame.
@@ -248,15 +610,25 @@ function AnatomicalScene({
       return;
     }
 
+    onOrientationChange({
+      right: getDirectionName(localRight),
+      left: getDirectionName(localLeft),
+      top: getDirectionName(localTop),
+      bottom: getDirectionName(localBottom),
+    });
+
     const screenMarkers = landmarks.map((landmark) => {
       landmark.object.getWorldPosition(worldPosition);
+
       let facingCamera = true;
 
       if (landmark.normal) {
         /*
-         * Convert the landmark's local normal
-         * to the current rotated model orientation.
+         * Convert the landmark's local
+         * normal to the current rotated
+         * model orientation.
          */
+
         normalMatrix.getNormalMatrix(landmark.object.matrixWorld);
 
         worldNormal
@@ -265,16 +637,18 @@ function AnatomicalScene({
           .normalize();
 
         /*
-         * Direction from landmark toward camera.
+         * Direction from landmark
+         * toward camera.
          */
+
         cameraDirection.copy(camera.position).sub(worldPosition).normalize();
 
         /*
-         * Positive dot product = this anatomical
-         * surface is facing the camera.
-         *
-         * 0.15 gives us a small tolerance near edges.
+         * Positive dot product means
+         * the anatomical surface is
+         * facing the camera.
          */
+
         facingCamera = worldNormal.dot(cameraDirection) > 0.15;
       }
 
@@ -295,15 +669,15 @@ function AnatomicalScene({
 
       return {
         numero: landmark.numero,
-
         id: landmark.id,
-
         nom: landmark.nom,
-
         description: landmark.description,
+
+        zone_t: landmark.zone_t,
 
         x,
         y,
+
         visible,
       };
     });
@@ -317,7 +691,7 @@ function AnatomicalScene({
       position={[
         -modelData.center.x * modelData.scale,
 
-        -modelData.center.y * modelData.scale,
+        -modelData.center.y * modelData.scale + 0.25,
 
         -modelData.center.z * modelData.scale,
       ]}
@@ -333,25 +707,185 @@ function AnatomicalScene({
 
 export default function AnatomicalDetailViewer({
   modelAsset,
-
   initialRotation = {
     x: 0,
     y: 0,
   },
-
+  longitudinalAxis = "x",
+  views = [],
+  features = {},
   onLandmarkPress,
+  onInteractionChange,
 }: Props) {
-  const rotationRef = useRef<Rotation>({
-    ...initialRotation,
-  });
+  const rotationRef = useRef(
+    new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(initialRotation.x, initialRotation.y, 0, "XYZ"),
+    ),
+  );
 
-  const zoomRef = useRef(1);
+  const zoomRef = useRef(DEFAULT_ZOOM);
+
+  const requestedViewRef = useRef<DetailModelView | null>(null);
 
   const zoomStartRef = useRef(1);
+
+  const [loading, setLoading] = useState(true);
+
+  const [loadedScene, setLoadedScene] = useState<THREE.Group | null>(null);
 
   const [markers, setMarkers] = useState<AnatomicalLandmark[]>([]);
 
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+
+  const [mirrored, setMirrored] = useState(false);
+
+  const [orientationLabels, setOrientationLabels] = useState<OrientationLabels>(
+    {
+      top: "",
+      bottom: "",
+      left: "",
+      right: "",
+    },
+  );
+  /* ----------------------------------------------------------
+     LOAD EXPO ASSET + GLTF
+     ---------------------------------------------------------- */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadModel = async () => {
+      try {
+        console.log("DETAIL: resolving asset", modelAsset);
+
+        setLoading(true);
+        setLoadedScene(null);
+        setMarkers([]);
+        setSelectedNumber(null);
+
+        /* -----------------------------------------
+         RESOLVE EXPO ASSET
+         ----------------------------------------- */
+
+        const asset = Asset.fromModule(modelAsset);
+
+        console.log("DETAIL: asset info", {
+          name: asset.name,
+          type: asset.type,
+          uri: asset.uri,
+          localUri: asset.localUri,
+        });
+
+        await asset.downloadAsync();
+
+        if (cancelled) {
+          return;
+        }
+
+        const uri = asset.localUri ?? asset.uri;
+
+        if (!uri) {
+          throw new Error("Unable to resolve GLB URI.");
+        }
+
+        console.log("DETAIL: asset ready", uri);
+
+        /* -----------------------------------------
+         READ GLB INTO MEMORY
+
+         We do this instead of:
+         loader.load(file://...)
+
+         because Android/Expo converts that path
+         to filesystem.local and returns 404.
+         ----------------------------------------- */
+
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        console.log("DETAIL: GLB read into memory", base64.length);
+
+        /* -----------------------------------------
+         BASE64 -> ARRAYBUFFER
+         ----------------------------------------- */
+
+        const binaryString = atob(base64);
+
+        const bytes = new Uint8Array(binaryString.length);
+
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const arrayBuffer = bytes.buffer;
+
+        console.log("DETAIL: GLB ArrayBuffer ready", arrayBuffer.byteLength);
+
+        /* -----------------------------------------
+         PARSE GLB DIRECTLY FROM MEMORY
+         ----------------------------------------- */
+
+        const loader = new GLTFLoader();
+
+        loader.parse(
+          arrayBuffer,
+
+          "",
+
+          (gltf) => {
+            if (cancelled) {
+              return;
+            }
+
+            console.log("DETAIL: GLTFLoader PARSE SUCCESS", {
+              children: gltf.scene.children.length,
+            });
+
+            setLoadedScene(gltf.scene);
+          },
+
+          (error) => {
+            if (cancelled) {
+              return;
+            }
+
+            console.error("DETAIL: GLTFLoader PARSE ERROR", error);
+
+            setLoading(false);
+          },
+        );
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("DETAIL: MODEL LOAD ERROR", error);
+
+        setLoading(false);
+      }
+    };
+
+    loadModel();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [modelAsset]);
+
+  /* ----------------------------------------------------------
+     MODEL READY
+     ---------------------------------------------------------- */
+
+  const handleLoaded = useCallback(() => {
+    console.log("=== DETAIL MODEL FULLY LOADED ===");
+
+    setLoading(false);
+  }, []);
 
   /* ----------------------------------------------------------
      GESTURES
@@ -359,15 +893,24 @@ export default function AnatomicalDetailViewer({
 
   const handlers = useSkeletonGestures({
     onRotate: (dx, dy) => {
-      rotationRef.current.y += dx * 0.015;
+      const sensitivity = 0.008;
 
-      rotationRef.current.x = THREE.MathUtils.clamp(
-        rotationRef.current.x + dy * 0.015,
-
-        -Math.PI / 2,
-
-        Math.PI / 2,
+      const horizontalRotation = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        dx * sensitivity,
       );
+
+      const verticalRotation = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        dy * sensitivity,
+      );
+
+      rotationRef.current
+        .premultiply(horizontalRotation)
+        .premultiply(verticalRotation)
+        .normalize();
+
+      requestedViewRef.current = null;
     },
 
     onPinchStart: () => {
@@ -385,6 +928,22 @@ export default function AnatomicalDetailViewer({
     },
   });
 
+  /* ----------------------------------------------------------
+     RESET WHEN MODEL CHANGES
+     ---------------------------------------------------------- */
+
+  useEffect(() => {
+    rotationRef.current.setFromEuler(
+      new THREE.Euler(initialRotation.x, initialRotation.y, 0, "XYZ"),
+    );
+
+    zoomRef.current = DEFAULT_ZOOM;
+  }, [modelAsset, initialRotation.x, initialRotation.y]);
+
+  /* ============================================================
+     RENDER
+     ============================================================ */
+
   return (
     <View style={styles.container}>
       {/* ========================================
@@ -392,43 +951,53 @@ export default function AnatomicalDetailViewer({
           ======================================== */}
 
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <LinearGradient
+  colors={["#DCE2E4", "#C9D1D4"]}
+  style={StyleSheet.absoluteFill}
+/>
         <Canvas
           camera={{
             position: [0, 0, 4],
+
             fov: 38,
+
             near: 0.01,
+
             far: 100,
           }}
-          gl={{
-            antialias: false,
-            alpha: false,
-          }}
-          onCreated={({ gl }) => {
-            gl.setClearColor(0xf5f6f7, 1);
+         gl={{
+  antialias: false,
+  alpha: true,
+}}
+        onCreated={({ gl }) => {
+  gl.setClearColor(0x000000, 0);
 
-            gl.outputColorSpace = THREE.SRGBColorSpace;
+  gl.outputColorSpace = THREE.SRGBColorSpace;
 
-            gl.toneMapping = THREE.ACESFilmicToneMapping;
-
-            gl.toneMappingExposure = 1;
-          }}
+  gl.toneMapping = THREE.NoToneMapping;
+}}
         >
-          <ambientLight intensity={0.65} />
+         <hemisphereLight
+  args={["#FFFFFF", "#AAB2B6", 1.7]}
+/>
 
-          <directionalLight position={[4, 5, 6]} intensity={1.6} />
 
-          <directionalLight position={[-4, 2, 3]} intensity={0.55} />
 
-          <directionalLight position={[0, -3, 2]} intensity={0.3} />
-
-          <Suspense fallback={null}>
+          {loadedScene && (
             <AnatomicalScene
-              modelAsset={modelAsset}
+              loadedScene={loadedScene}
               rotationRef={rotationRef}
               zoomRef={zoomRef}
               onMarkersChange={setMarkers}
+              onLoaded={handleLoaded}
+              selectedNumber={selectedNumber}
+              longitudinalAxis={longitudinalAxis}
+              requestedViewRef={requestedViewRef}
+              mirrored={mirrored}
+              onOrientationChange={setOrientationLabels}
             />
-          </Suspense>
+          )}
+          <CameraFollowingLight />
         </Canvas>
       </View>
 
@@ -436,10 +1005,23 @@ export default function AnatomicalDetailViewer({
           GESTURES
           ======================================== */}
 
-      <View collapsable={false} style={StyleSheet.absoluteFill} {...handlers} />
+      <View
+        collapsable={false}
+        style={StyleSheet.absoluteFill}
+        onTouchStart={() => {
+          onInteractionChange?.(true);
+        }}
+        onTouchEnd={() => {
+          onInteractionChange?.(false);
+        }}
+        onTouchCancel={() => {
+          onInteractionChange?.(false);
+        }}
+        {...handlers}
+      />
 
       {/* ========================================
-          NUMBERS + NAMES
+          NUMBERS
           ======================================== */}
 
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
@@ -458,6 +1040,7 @@ export default function AnatomicalDetailViewer({
                 }}
                 style={[
                   styles.marker,
+
                   {
                     left: marker.x - 13,
 
@@ -486,23 +1069,113 @@ export default function AnatomicalDetailViewer({
             );
           })}
       </View>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        {!!orientationLabels.top && (
+          <Text style={[styles.orientationLabel, styles.orientationTop]}>
+            {orientationLabels.top}
+          </Text>
+        )}
+
+        {!!orientationLabels.bottom && (
+          <Text style={[styles.orientationLabel, styles.orientationBottom]}>
+            {orientationLabels.bottom}
+          </Text>
+        )}
+
+        {!!orientationLabels.left && (
+          <Text style={[styles.orientationLabel, styles.orientationLeft]}>
+            {orientationLabels.left}
+          </Text>
+        )}
+
+        {!!orientationLabels.right && (
+          <Text style={[styles.orientationLabel, styles.orientationRight]}>
+            {orientationLabels.right}
+          </Text>
+        )}
+      </View>
+
+      <View style={styles.controlsContainer} pointerEvents="box-none">
+  {/* TOP ROW: MIRROR + RESET */}
+
+  <View style={styles.secondaryActions}>
+    <Pressable
+      style={[
+        styles.mirrorButton,
+        mirrored && styles.mirrorButtonActive,
+      ]}
+      onPress={() => {
+        setMirrored((prev) => !prev);
+      }}
+    >
+      <Text
+        style={[
+          styles.mirrorButtonText,
+          mirrored && styles.mirrorButtonTextActive,
+        ]}
+      >
+        {mirrored
+          ? "Clavicule droite"
+          : "Clavicule gauche (miroir)"}
+      </Text>
+    </Pressable>
+
+    <Pressable
+      style={styles.resetButton}
+      onPress={() => {
+        rotationRef.current.setFromEuler(
+          new THREE.Euler(
+            initialRotation.x,
+            initialRotation.y,
+            0,
+            "XYZ",
+          ),
+        );
+
+        zoomRef.current = DEFAULT_ZOOM;
+
+        setSelectedNumber(null);
+
+        requestedViewRef.current = {
+          id: "__reset__",
+          label: "",
+          cameraDirection: [0, 0, 1],
+          cameraUp: [0, 1, 0],
+        };
+      }}
+    >
+      <Text style={styles.resetText}>
+        Réinitialiser
+      </Text>
+    </Pressable>
+  </View>
+
+  {/* BELOW: 6 ANATOMICAL VIEWS */}
+
+  {features.standardViews && views.length > 0 && (
+    <View style={styles.viewsGrid}>
+      {views.map((view) => (
+        <Pressable
+          key={view.id}
+          style={styles.viewButton}
+          onPress={() => {
+            requestedViewRef.current = view;
+          }}
+        >
+          <Text style={styles.viewButtonText}>
+            {view.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  )}
+</View>
 
       {/* ========================================
-          RESET
+          LOADING
           ======================================== */}
 
-      <Pressable
-        style={styles.resetButton}
-        onPress={() => {
-          rotationRef.current = {
-            ...initialRotation,
-          };
-
-          zoomRef.current = 1;
-        }}
-      >
-        <Text style={styles.resetText}>Réinitialiser</Text>
-      </Pressable>
+      {loading && <SkeletonLoader backgroundColor="#DCE2E4" />}
     </View>
   );
 }
@@ -515,7 +1188,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
 
-    backgroundColor: "#F5F6F7",
+      backgroundColor: "#DCE2E4",
+
   },
 
   marker: {
@@ -528,6 +1202,7 @@ const styles = StyleSheet.create({
 
   numberCircle: {
     width: 26,
+
     height: 26,
 
     borderRadius: 13,
@@ -535,9 +1210,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#27323A",
 
     borderWidth: 2,
+
     borderColor: "#FFFFFF",
 
     alignItems: "center",
+
     justifyContent: "center",
 
     zIndex: 2,
@@ -561,27 +1238,138 @@ const styles = StyleSheet.create({
     color: "#27323A",
   },
 
-  resetButton: {
-    position: "absolute",
+ resetButton: {
+  minHeight: 38,
 
-    right: 14,
+  paddingHorizontal: 18,
+  paddingVertical: 9,
 
-    bottom: 14,
+  alignItems: "center",
+  justifyContent: "center",
 
-    paddingHorizontal: 14,
+  borderRadius: 12,
 
-    paddingVertical: 8,
-
-    borderRadius: 18,
-
-    backgroundColor: "rgba(39,50,58,0.90)",
-  },
+  backgroundColor: "#27323A",
+},
 
   resetText: {
-    color: "#FFFFFF",
+  color: "#FFFFFF",
 
-    fontSize: 12,
+  fontSize: 11,
+  fontWeight: "700",
+},
 
+  viewButton: {
+    width: "31.5%",
+
+    minHeight: 38,
+
+    paddingHorizontal: 5,
+    paddingVertical: 9,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    borderRadius: 12,
+
+    backgroundColor: "#FFFFFF",
+
+    borderWidth: 1,
+    borderColor: "#D8DEE2",
+  },
+
+  viewButtonText: {
+    color: "#27323A",
+
+    fontSize: 11,
     fontWeight: "700",
+
+    textAlign: "center",
+  },
+  controlsContainer: {
+    position: "absolute",
+
+    left: 14,
+    right: 14,
+    bottom: 14,
+
+    gap: 12,
+  },
+  secondaryActions: {
+    flexDirection: "row",
+
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    gap: 10,
+  },
+  viewsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+
+    justifyContent: "space-between",
+
+    rowGap: 8,
+  },
+
+  mirrorButton: {
+    flex: 1,
+
+    minHeight: 38,
+
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    borderRadius: 12,
+
+    backgroundColor: "#FFFFFF",
+
+    borderWidth: 1,
+    borderColor: "#D8DEE2",
+  },
+
+  mirrorButtonActive: {
+    backgroundColor: "#27323A",
+    borderColor: "#27323A",
+  },
+
+  mirrorButtonText: {
+    color: "#27323A",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  mirrorButtonTextActive: {
+    color: "#FFFFFF",
+  },
+  orientationLabel: {
+    position: "absolute",
+    color: "#66737A",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  orientationTop: {
+    top: 12,
+    alignSelf: "center",
+  },
+
+  orientationBottom: {
+  bottom: 178,
+  alignSelf: "center",
+},
+
+  orientationLeft: {
+    left: 10,
+    top: "48%",
+  },
+
+  orientationRight: {
+    right: 10,
+    top: "48%",
   },
 });

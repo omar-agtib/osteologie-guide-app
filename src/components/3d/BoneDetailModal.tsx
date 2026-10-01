@@ -1,6 +1,7 @@
-import { Canvas } from "@react-three/fiber/native";
-
+import { Canvas, useFrame } from "@react-three/fiber/native";
+import { useEffect, useRef, useState } from "react";
 import {
+  Dimensions,
   Modal,
   Pressable,
   ScrollView,
@@ -8,40 +9,54 @@ import {
   Text,
   View,
 } from "react-native";
-
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import * as THREE from "three";
 
-import BoneDetailModel from "./BoneDetailModel";
-
 import { boneData, BoneInfo } from "../../data/boneData";
-
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { getDetailModel } from "../../data/detailModels";
 import { useSkeletonGestures } from "../../hooks/useSkeletonGestures";
-
-import { useFrame } from "@react-three/fiber/native";
 
 import AnatomicalDetailViewer, {
   AnatomicalLandmark,
 } from "./AnatomicalDetailViewer";
+import BoneDetailModel from "./BoneDetailModel";
 
-import {
-  getDetailModel,
-} from "../../data/detailModels";
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+
+const SCREEN_HEIGHT = Dimensions.get("window").height;
+
+/*
+ * Large interactive area.
+ *
+ * 72% leaves enough space for:
+ * - modal header
+ * - a small indication that content continues below
+ *
+ * The user can then scroll down to read the description.
+ */
+const VIEWER_HEIGHT = SCREEN_HEIGHT * 0.72;
+
+/* ============================================================
+   TYPES
+   ============================================================ */
 
 type Props = {
   visible: boolean;
-
   boneName: string | null;
-
   mesh: THREE.Mesh | null;
-
   onClose: () => void;
 };
+
+type Rotation = {
+  x: number;
+  y: number;
+};
+
+/* ============================================================
+   BONE NAME
+   ============================================================ */
 
 function formatBoneName(name: string) {
   const lower = name.toLowerCase();
@@ -72,12 +87,9 @@ function formatBoneName(name: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-
-
-type Rotation = {
-  x: number;
-  y: number;
-};
+/* ============================================================
+   GENERIC FALLBACK BONE
+   ============================================================ */
 
 function InteractiveBone({
   mesh,
@@ -91,10 +103,11 @@ function InteractiveBone({
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame(() => {
-    if (!groupRef.current) return;
+    if (!groupRef.current) {
+      return;
+    }
 
     groupRef.current.rotation.x = rotationRef.current.x;
-
     groupRef.current.rotation.y = rotationRef.current.y;
 
     groupRef.current.scale.setScalar(zoomRef.current);
@@ -107,30 +120,42 @@ function InteractiveBone({
   );
 }
 
+/* ============================================================
+   MODAL
+   ============================================================ */
+
 export default function BoneDetailModal({
   visible,
   boneName,
   mesh,
   onClose,
 }: Props) {
-  const [
-    selectedLandmark,
-    setSelectedLandmark,
-  ] =
-    useState<AnatomicalLandmark | null>(
-      null,
-    );
+  const [selectedLandmark, setSelectedLandmark] =
+    useState<AnatomicalLandmark | null>(null);
+  const [viewerInteracting, setViewerInteracting] = useState(false);
 
-  const rotationRef =
-    useRef<Rotation>({
-      x: 0,
-      y: 0,
-    });
+  /* ----------------------------------------------------------
+     FALLBACK VIEWER STATE
+     ---------------------------------------------------------- */
+
+  const rotationRef = useRef<Rotation>({
+    x: 0,
+    y: 0,
+  });
 
   const zoomRef = useRef(1);
+
   const zoomStartRef = useRef(1);
+
+  /* ----------------------------------------------------------
+     RESET WHEN MODAL OPENS
+     ---------------------------------------------------------- */
+
   useEffect(() => {
-  if (visible) {
+    if (!visible) {
+      return;
+    }
+
     rotationRef.current = {
       x: 0,
       y: 0,
@@ -138,19 +163,23 @@ export default function BoneDetailModal({
 
     zoomRef.current = 1;
 
-    setSelectedLandmark(
-      null,
-    );
-  }
-}, [visible, mesh]);
+    setSelectedLandmark(null);
+  }, [visible, mesh]);
+
+  /* ----------------------------------------------------------
+     FALLBACK GESTURES
+     ---------------------------------------------------------- */
+
   const handlers = useSkeletonGestures({
     onRotate: (dx, dy) => {
       rotationRef.current.y += dx * 0.015;
       rotationRef.current.x += dy * 0.015;
     },
+
     onPinchStart: () => {
       zoomStartRef.current = zoomRef.current;
     },
+
     onPinch: (scale) => {
       zoomRef.current = THREE.MathUtils.clamp(
         zoomStartRef.current * Math.pow(scale, 1.2),
@@ -160,22 +189,23 @@ export default function BoneDetailModal({
     },
   });
 
+  /* ----------------------------------------------------------
+     NOTHING TO DISPLAY
+     ---------------------------------------------------------- */
+
   if (!boneName || !mesh) {
     return null;
   }
 
-const formattedName =
-  formatBoneName(boneName);
+  const formattedName = formatBoneName(boneName);
 
-const detailModel =
-  getDetailModel(
-    formattedName,
-  );
+  const detailModel = getDetailModel(formattedName);
 
-const info:
-  | BoneInfo
-  | undefined =
-  boneData[formattedName];
+  const info: BoneInfo | undefined = boneData[formattedName];
+
+  /* ============================================================
+     RENDER
+     ============================================================ */
 
   return (
     <Modal
@@ -189,7 +219,9 @@ const info:
           style={styles.container}
           edges={["top", "bottom", "left", "right"]}
         >
-          {/* HEADER */}
+          {/* ===================================================
+              HEADER
+              =================================================== */}
 
           <View style={styles.header}>
             <Text style={styles.title}>{formattedName}</Text>
@@ -199,201 +231,185 @@ const info:
             </Pressable>
           </View>
 
-          {/* 3D VIEWER */}
-
-          {/* 3D VIEWER */}
-
-         <View style={styles.viewer}>
-  {detailModel ? (
-    <AnatomicalDetailViewer
-      modelAsset={
-        detailModel.asset
-      }
-
-      initialRotation={
-        detailModel.initialRotation
-      }
-
-      onLandmarkPress={(
-        landmark,
-      ) => {
-        setSelectedLandmark(
-          landmark,
-        );
-      }}
-    />
-  ) : (
-    <>
-      <View
-        pointerEvents="none"
-        style={
-          StyleSheet.absoluteFill
-        }
-      >
-        <Canvas
-          camera={{
-            position: [
-              0,
-              0,
-              3,
-            ],
-
-            fov: 45,
-
-            near: 0.01,
-
-            far: 1000,
-          }}
-          gl={{
-            antialias: false,
-
-            alpha: false,
-          }}
-          onCreated={({
-            gl,
-          }) => {
-            gl.setClearColor(
-              0xf5f6f7,
-              1,
-            );
-          }}
-        >
-          <ambientLight
-            intensity={2}
-          />
-
-          <directionalLight
-            position={[
-              5,
-              5,
-              5,
-            ]}
-            intensity={3}
-          />
-
-          <directionalLight
-            position={[
-              -5,
-              2,
-              4,
-            ]}
-            intensity={2}
-          />
-
-          <directionalLight
-            position={[
-              0,
-              -5,
-              2,
-            ]}
-            intensity={1}
-          />
-
-          <InteractiveBone
-            mesh={mesh}
-            rotationRef={
-              rotationRef
-            }
-            zoomRef={
-              zoomRef
-            }
-          />
-        </Canvas>
-      </View>
-
-      <View
-        collapsable={false}
-        style={
-          StyleSheet.absoluteFill
-        }
-        {...handlers}
-      />
-    </>
-  )}
-</View>
-
-          {/* INFORMATIONS */}
+          {/* ===================================================
+              ONE SCROLLVIEW FOR THE WHOLE PAGE
+              =================================================== */}
 
           <ScrollView
-            style={styles.infoContainer}
-            contentContainerStyle={styles.infoContent}
+            style={styles.contentScroll}
+            contentContainerStyle={styles.contentScrollContainer}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={!viewerInteracting}
           >
-            {selectedLandmark && (
-  <View
-    style={
-      styles.landmarkCard
-    }
-  >
-    <View
-      style={
-        styles.landmarkHeader
-      }
-    >
-      <View
-        style={
-          styles.landmarkNumber
-        }
-      >
-        <Text
-          style={
-            styles.landmarkNumberText
-          }
-        >
-          {
-            selectedLandmark.numero
-          }
-        </Text>
-      </View>
+            {/* =================================================
+                LARGE 3D VIEWER
+                ================================================= */}
 
-      <Text
-        style={
-          styles.landmarkTitle
-        }
-      >
-        {
-          selectedLandmark.nom
-        }
-      </Text>
-    </View>
+            <View style={styles.viewer}>
+              {detailModel ? (
+                <AnatomicalDetailViewer
+                  modelAsset={detailModel.asset}
+                  initialRotation={detailModel.initialRotation}
+                  longitudinalAxis={detailModel.longitudinalAxis}
+                  views={detailModel.views}
+                  features={detailModel.features}
+                  onLandmarkPress={(landmark) => {
+                    setSelectedLandmark(landmark);
+                  }}
+                  onInteractionChange={setViewerInteracting}
+                />
+              ) : (
+                <>
+                  <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                    <Canvas
+                      camera={{
+                        position: [0, 0, 3],
+                        fov: 45,
+                        near: 0.01,
+                        far: 1000,
+                      }}
+                      gl={{
+                        antialias: false,
+                        alpha: false,
+                      }}
+                      onCreated={({ gl }) => {
+                        gl.setClearColor(0xf5f6f7, 1);
+                      }}
+                    >
+                      <ambientLight intensity={2} />
 
-    <Text
-      style={
-        styles.landmarkDescription
-      }
-    >
-      {
-        selectedLandmark.description
-      }
-    </Text>
-  </View>
-)}
-            {info ? (
-              <>
-                <Text style={styles.sectionTitle}>Description</Text>
+                      <directionalLight position={[5, 5, 5]} intensity={3} />
 
-                <Text style={styles.text}>{info.description}</Text>
+                      <directionalLight position={[-5, 2, 4]} intensity={2} />
 
-                <Text style={styles.sectionTitle}>Location</Text>
+                      <directionalLight position={[0, -5, 2]} intensity={1} />
 
-                <Text style={styles.text}>{info.location}</Text>
+                      <InteractiveBone
+                        mesh={mesh}
+                        rotationRef={rotationRef}
+                        zoomRef={zoomRef}
+                      />
+                    </Canvas>
+                  </View>
 
-                <Text style={styles.sectionTitle}>Function</Text>
+                  <View
+                    collapsable={false}
+                    style={StyleSheet.absoluteFill}
+                    {...handlers}
+                  />
+                </>
+              )}
+            </View>
 
-                <Text style={styles.text}>{info.function}</Text>
+            {/* =================================================
+                INFORMATION
+                ================================================= */}
 
-                {info.articulations && (
-                  <>
-                    <Text style={styles.sectionTitle}>Articulations</Text>
+            <View style={styles.infoContent}>
+              {/* Selected anatomical landmark */}
 
-                    <Text style={styles.text}>{info.articulations}</Text>
-                  </>
-                )}
-              </>
-            ) : (
-              <Text style={styles.text}>
-                No information available yet for {formattedName}.
-              </Text>
-            )}
+              {selectedLandmark && (
+                <View style={styles.landmarkCard}>
+                  <View style={styles.landmarkHeader}>
+                    <View style={styles.landmarkNumber}>
+                      <Text style={styles.landmarkNumberText}>
+                        {selectedLandmark.numero}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.landmarkTitle}>
+                      {selectedLandmark.nom}
+                    </Text>
+                  </View>
+
+                  <Text style={styles.landmarkDescription}>
+                    {selectedLandmark.description}
+                  </Text>
+                </View>
+              )}
+
+              {/* General bone information */}
+
+              {info ? (
+                <>
+                  {/* Définition */}
+
+                  <Text style={styles.firstSectionTitle}>Définition</Text>
+
+                  <Text style={styles.text}>{info.definition}</Text>
+
+                  {/* Situation */}
+
+                  <Text style={styles.sectionTitle}>Situation</Text>
+
+                  <Text style={styles.text}>{info.situation}</Text>
+
+                  {/* Orientation */}
+
+                  {info.orientation && (
+                    <>
+                      <Text style={styles.sectionTitle}>Orientation</Text>
+
+                      <Text style={styles.text}>{info.orientation}</Text>
+                    </>
+                  )}
+
+                  {/* Description anatomique */}
+
+                  {info.descriptionAnatomique && (
+                    <>
+                      <Text style={styles.sectionTitle}>
+                        Forme anatomique générale
+                      </Text>
+
+                      <Text style={styles.text}>
+                        {info.descriptionAnatomique}
+                      </Text>
+                    </>
+                  )}
+
+                  {/* Articulations */}
+
+                  {info.articulations && (
+                    <>
+                      <Text style={styles.sectionTitle}>Articulations</Text>
+
+                      <Text style={styles.text}>{info.articulations}</Text>
+                    </>
+                  )}
+
+                  {/* Repères palpables */}
+
+                  {info.reperesPalpables && (
+                    <>
+                      <Text style={styles.sectionTitle}>
+                        Repères anatomiques palpables
+                      </Text>
+
+                      <Text style={styles.text}>{info.reperesPalpables}</Text>
+                    </>
+                  )}
+
+                  {/* Applications cliniques */}
+
+                  {info.applicationsCliniques && (
+                    <>
+                      <Text style={styles.sectionTitle}>
+                        Applications cliniques
+                      </Text>
+
+                      <Text style={styles.text}>
+                        {info.applicationsCliniques}
+                      </Text>
+                    </>
+                  )}
+                </>
+              ) : (
+                <Text style={styles.text}>
+                  Aucune information disponible pour {formattedName}.
+                </Text>
+              )}   
+            </View>
           </ScrollView>
         </SafeAreaView>
       </SafeAreaProvider>
@@ -401,14 +417,27 @@ const info:
   );
 }
 
+/* ============================================================
+   STYLES
+   ============================================================ */
+
 const styles = StyleSheet.create({
+  /* ----------------------------------------------------------
+     ROOT
+     ---------------------------------------------------------- */
+
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
 
+  /* ----------------------------------------------------------
+     HEADER
+     ---------------------------------------------------------- */
+
   header: {
     minHeight: 56,
+
     paddingVertical: 8,
     paddingHorizontal: 20,
 
@@ -416,11 +445,15 @@ const styles = StyleSheet.create({
 
     alignItems: "center",
     justifyContent: "space-between",
+
+    backgroundColor: "#FFFFFF",
   },
 
   title: {
     flex: 1,
+
     marginRight: 12,
+
     fontSize: 24,
     fontWeight: "800",
 
@@ -445,20 +478,50 @@ const styles = StyleSheet.create({
     color: "#27323A",
   },
 
-  viewer: {
+  /* ----------------------------------------------------------
+     MAIN SCROLL
+     ---------------------------------------------------------- */
+
+  contentScroll: {
     flex: 1,
-    maxHeight: 330,
+  },
+
+  contentScrollContainer: {
+    flexGrow: 1,
+  },
+
+  /* ----------------------------------------------------------
+     3D VIEWER
+     ---------------------------------------------------------- */
+
+  viewer: {
+    height: VIEWER_HEIGHT,
 
     backgroundColor: "#F5F6F7",
+
+    overflow: "hidden",
   },
 
-  infoContainer: {
-    flex: 1,
-  },
+  /* ----------------------------------------------------------
+     INFORMATION
+     ---------------------------------------------------------- */
 
   infoContent: {
-    padding: 22,
-    paddingBottom: 50,
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 60,
+
+    backgroundColor: "#FFFFFF",
+  },
+
+  firstSectionTitle: {
+    marginTop: 0,
+    marginBottom: 6,
+
+    fontSize: 16,
+    fontWeight: "800",
+
+    color: "#27323A",
   },
 
   sectionTitle: {
@@ -477,71 +540,66 @@ const styles = StyleSheet.create({
 
     color: "#58636B",
   },
+
+  /* ----------------------------------------------------------
+     SELECTED LANDMARK
+     ---------------------------------------------------------- */
+
   landmarkCard: {
-  marginBottom: 12,
+    marginBottom: 20,
 
-  padding: 16,
+    padding: 16,
 
-  borderRadius: 14,
+    borderRadius: 14,
 
-  backgroundColor:
-    "#FFF9DE",
+    backgroundColor: "#FFF9DE",
 
-  borderWidth: 1,
+    borderWidth: 1,
+    borderColor: "#E8D68A",
+  },
 
-  borderColor:
-    "#E8D68A",
-},
+  landmarkHeader: {
+    flexDirection: "row",
 
-landmarkHeader: {
-  flexDirection: "row",
+    alignItems: "center",
 
-  alignItems: "center",
+    marginBottom: 10,
+  },
 
-  marginBottom: 10,
-},
+  landmarkNumber: {
+    width: 34,
+    height: 34,
 
-landmarkNumber: {
-  width: 34,
+    marginRight: 10,
 
-  height: 34,
+    borderRadius: 17,
 
-  marginRight: 10,
+    backgroundColor: "#FFD700",
 
-  borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  backgroundColor:
-    "#FFD700",
+  landmarkNumberText: {
+    color: "#27323A",
 
-  alignItems: "center",
+    fontSize: 14,
+    fontWeight: "900",
+  },
 
-  justifyContent:
-    "center",
-},
+  landmarkTitle: {
+    flex: 1,
 
-landmarkNumberText: {
-  color: "#27323A",
+    color: "#27323A",
 
-  fontSize: 14,
+    fontSize: 17,
+    fontWeight: "800",
+  },
 
-  fontWeight: "900",
-},
+  landmarkDescription: {
+    color: "#58636B",
 
-landmarkTitle: {
-  flex: 1,
-
-  color: "#27323A",
-
-  fontSize: 17,
-
-  fontWeight: "800",
-},
-
-landmarkDescription: {
-  color: "#58636B",
-
-  fontSize: 14,
-
-  lineHeight: 21,
-},
+    fontSize: 14,
+    lineHeight: 21,
+  },
 });
