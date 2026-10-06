@@ -1,7 +1,5 @@
-import { Image } from "expo-image";
 import { X } from "lucide-react-native";
 import {
-  FlatList,
   Modal,
   Pressable,
   StyleSheet,
@@ -9,9 +7,11 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { FlatList } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radii, spacing } from "../../constants/theme";
+import { ZoomableImage } from "./ZoomableImage";
 
 type Props = {
   visible: boolean;
@@ -28,7 +28,6 @@ export function CourseReaderModal({ visible, title, pages, onClose }: Props) {
 
   const pageWidth = width - 24;
   const pageHeight = pageWidth * A4_RATIO;
-
   return (
     <Modal
       visible={visible}
@@ -73,20 +72,18 @@ export function CourseReaderModal({ visible, title, pages, onClose }: Props) {
           windowSize={4}
           showsVerticalScrollIndicator
           renderItem={({ item, index }) => (
-            <View style={styles.pageContainer}>
-              <Image
+            <View
+              style={{
+                width: pageWidth,
+                height: pageHeight,
+              }}
+            >
+              <ZoomableImage
                 source={item}
-                style={{
-                  width: pageWidth,
-                  height: pageHeight,
-                }}
-                contentFit="contain"
-                cachePolicy="memory-disk"
+                height={pageHeight}
+                isolateAtMinScale={false}
+                allowParentScrollAtEdges
               />
-
-              <Text style={styles.pageCounter}>
-                {index + 1} / {pages.length}
-              </Text>
             </View>
           )}
         />

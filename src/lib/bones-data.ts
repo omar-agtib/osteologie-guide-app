@@ -71,7 +71,7 @@ export const ZONE_DETAILS: Record<ZoneKey, ZoneDetail> = {
   },
   ax: {
     zoneKey: "ax",
-    accentKey: "dark",
+    accentKey: "yellow",
     title: "Tête & tronc",
     eyebrow: "AXIAL",
     bones: [

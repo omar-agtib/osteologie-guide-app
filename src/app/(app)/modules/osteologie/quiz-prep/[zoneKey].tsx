@@ -1,11 +1,10 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { BookOpen, CheckCircle2, ChevronLeft } from "lucide-react-native";
+import { Bone, BookOpen, Brain, ChevronLeft } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ZoneKey } from "../../../../../components/3d/SkeletonViewer";
-import { Button } from "../../../../../components/ui/Button";
 import { CourseReaderModal } from "../../../../../components/ui/CourseReaderModal";
 
 import {
@@ -32,19 +31,17 @@ export default function QuizPreparationScreen() {
 
   const course = COURSE_DOCUMENTS[zone];
 
-  // If a course exists, open it automatically
-  // before allowing the user to start the quiz.
-  const [readerVisible, setReaderVisible] = useState(Boolean(course));
-
-  const [courseConsulted, setCourseConsulted] = useState(false);
+  const [readerVisible, setReaderVisible] = useState(false);
 
   const closeCourse = () => {
     setReaderVisible(false);
-    setCourseConsulted(true);
   };
 
   const startQuiz = () => {
     router.replace(`/modules/osteologie/quiz/${zone}`);
+  };
+  const startIdentification = () => {
+    router.push(`/modules/osteologie/identification/${zone}`);
   };
 
   return (
@@ -82,43 +79,24 @@ export default function QuizPreparationScreen() {
             },
           ]}
         >
-          {courseConsulted ? (
-            <CheckCircle2 size={34} color={accent.color} strokeWidth={1.8} />
-          ) : (
-            <BookOpen size={34} color={accent.color} strokeWidth={1.8} />
-          )}
+          <Bone size={36} color={accent.color} strokeWidth={1.8} />
         </View>
 
-        <Text style={styles.title}>
-          {courseConsulted
-            ? "Cours consulté"
-            : "Consultez le cours avant le quiz"}
-        </Text>
+        <Text style={styles.title}>Choisissez votre activité</Text>
 
         <Text style={styles.description}>
-          {courseConsulted
-            ? "Vous pouvez maintenant commencer le quiz ou relire le support de cours."
-            : "Prenez quelques minutes pour revoir le support de cours avant de tester vos connaissances."}
+          Consultez le cours, testez vos connaissances avec le quiz ou
+          entraînez-vous à identifier les repères anatomiques.
         </Text>
 
-        {course ? (
-          <View style={styles.courseCard}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.courseLabel}>SUPPORT DE COURS</Text>
+        {course && (
+          <View style={styles.courseInfo}>
+            <Text style={styles.courseLabel}>MODULE</Text>
 
-              <Text style={styles.courseTitle}>{course.title}</Text>
+            <Text style={styles.courseTitle}>{course.title}</Text>
 
-              <Text style={styles.coursePages}>
-                {course.pages.length} pages
-              </Text>
-            </View>
-
-            <BookOpen size={24} color={accent.color} />
-          </View>
-        ) : (
-          <View style={styles.courseCard}>
-            <Text style={styles.description}>
-              Aucun support de cours n'est encore disponible pour ce module.
+            <Text style={styles.coursePages}>
+              {course.pages.length} pages de cours
             </Text>
           </View>
         )}
@@ -126,21 +104,69 @@ export default function QuizPreparationScreen() {
 
       <View style={styles.actions}>
         {course && (
-          <Button
-            label={courseConsulted ? "Relire le cours" : "Lire le cours"}
-            variant="secondary"
+          <Pressable
+            style={styles.actionCard}
             onPress={() => setReaderVisible(true)}
-          />
+          >
+            <View
+              style={[
+                styles.actionIcon,
+                { backgroundColor: `${accent.color}18` },
+              ]}
+            >
+              <BookOpen size={23} color={accent.color} strokeWidth={2} />
+            </View>
+
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Consulter le cours</Text>
+              <Text style={styles.actionDescription}>
+                Relire le support de cours
+              </Text>
+            </View>
+
+            <Text style={[styles.actionArrow, { color: accent.color }]}>›</Text>
+          </Pressable>
         )}
 
-        <Button
-          label="Commencer le quiz"
-          disabled={Boolean(course) && !courseConsulted}
-          onPress={startQuiz}
-          style={{
-            backgroundColor: accent.color,
-          }}
-        />
+        <Pressable style={styles.actionCard} onPress={startQuiz}>
+          <View
+            style={[
+              styles.actionIcon,
+              { backgroundColor: `${accent.color}18` },
+            ]}
+          >
+            <Brain size={23} color={accent.color} strokeWidth={2} />
+          </View>
+
+          <View style={styles.actionText}>
+            <Text style={styles.actionTitle}>Passer le quiz</Text>
+            <Text style={styles.actionDescription}>
+              Tester vos connaissances
+            </Text>
+          </View>
+
+          <Text style={[styles.actionArrow, { color: accent.color }]}>›</Text>
+        </Pressable>
+
+        <Pressable style={styles.actionCard} onPress={startIdentification}>
+          <View
+            style={[
+              styles.actionIcon,
+              { backgroundColor: `${accent.color}18` },
+            ]}
+          >
+            <Bone size={23} color={accent.color} strokeWidth={2} />
+          </View>
+
+          <View style={styles.actionText}>
+            <Text style={styles.actionTitle}>Identification anatomique</Text>
+            <Text style={styles.actionDescription}>
+              Identifier les repères sur les planches
+            </Text>
+          </View>
+
+          <Text style={[styles.actionArrow, { color: accent.color }]}>›</Text>
+        </Pressable>
       </View>
 
       {course && (
@@ -218,10 +244,21 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  courseCard: {
+  courseInfo: {
     width: "100%",
     marginTop: 28,
     padding: 16,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+  },
+
+  actionCard: {
+    minHeight: 72,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderRadius: 18,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -231,6 +268,40 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
+  actionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  actionText: {
+    flex: 1,
+  },
+
+  actionTitle: {
+    fontFamily: "IBMPlexSans_600SemiBold",
+    fontSize: 15,
+    color: colors.ink,
+  },
+
+  actionDescription: {
+    marginTop: 2,
+    fontFamily: "IBMPlexSans_400Regular",
+    fontSize: 12,
+    color: colors.muted,
+  },
+
+  actionArrow: {
+    fontFamily: "IBMPlexSans_400Regular",
+    fontSize: 28,
+    lineHeight: 30,
+  },
+
+  actions: {
+    gap: 10,
+  },
   courseLabel: {
     fontFamily: "IBMPlexSans_600SemiBold",
     fontSize: 10,
