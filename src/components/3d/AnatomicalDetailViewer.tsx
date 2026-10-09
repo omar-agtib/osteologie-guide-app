@@ -24,10 +24,11 @@ export type AnatomicalLandmark = {
   nom: string;
   description: string;
 
-  // Optional anatomical zone along the bone:
-  // 0 = lateral end
-  // 1 = medial end
   zone_t?: [number, number];
+
+  zone_bit?: number;
+
+  camera?: [number, number, number];
 
   x: number;
   y: number;
@@ -248,23 +249,37 @@ function AnatomicalScene({
           : null;
 
       result.push({
-        numero: data.numero,
+  numero: data.numero,
 
-        id: data.id ?? `repere_${data.numero}`,
+  id: data.id ?? `repere_${data.numero}`,
 
-        nom: data.nom ?? `Repère ${data.numero}`,
+  nom: data.nom ?? `Repère ${data.numero}`,
 
-        description: data.description ?? "",
+  description: data.description ?? "",
 
-        zone_t:
-          Array.isArray(data.zone_t) && data.zone_t.length >= 2
-            ? [Number(data.zone_t[0]), Number(data.zone_t[1])]
-            : undefined,
+  zone_t:
+    Array.isArray(data.zone_t) && data.zone_t.length >= 2
+      ? [Number(data.zone_t[0]), Number(data.zone_t[1])]
+      : undefined,
 
-        normal,
+  zone_bit:
+    typeof data.zone_bit === "number"
+      ? data.zone_bit
+      : undefined,
 
-        object,
-      });
+  camera:
+    Array.isArray(data.camera) && data.camera.length >= 3
+      ? [
+          Number(data.camera[0]),
+          Number(data.camera[1]),
+          Number(data.camera[2]),
+        ]
+      : undefined,
+
+  normal,
+
+  object,
+});
     });
 
     result.sort((a, b) => a.numero - b.numero);
@@ -288,6 +303,9 @@ function AnatomicalScene({
   }, [landmarks, selectedNumber]);
 
   const selectedZone = selectedLandmark?.zone_t ?? null;
+
+const selectedZoneBit =
+  selectedLandmark?.zone_bit ?? null;
 
   // ======================================================
   // LONGITUDINAL RANGE OF THE DETAILED MODEL
@@ -349,62 +367,58 @@ function AnatomicalScene({
   // ======================================================
 
   useEffect(() => {
-    const highlightColor = new THREE.Color("#F2C94C");
+  const highlightColor = new THREE.Color("#F2C94C");
 
-    scene.traverse((object: any) => {
-      if (!object.isMesh) {
-        return;
-      }
+  scene.traverse((object: any) => {
+    if (!object.isMesh) {
+      return;
+    }
 
-      const geometry = object.geometry as THREE.BufferGeometry;
+    const geometry = object.geometry as THREE.BufferGeometry;
 
-      const position = geometry.getAttribute("position");
+    const position = geometry.getAttribute("position");
+    const color = geometry.getAttribute("color");
 
-      const color = geometry.getAttribute("color");
+    const zones =
+      geometry.getAttribute("_zones") ??
+      geometry.getAttribute("_ZONES");
 
-      const originalColors = object.userData.originalVertexColors as
+    const originalColors =
+      object.userData.originalVertexColors as
         | Float32Array
         | undefined;
 
-      if (!position || !color || !originalColors) {
-        return;
-      }
+    if (!position || !color || !originalColors) {
+      return;
+    }
 
-      // ----------------------------------------
-      // Always restore the original GLB colors.
-      // ----------------------------------------
+    // Restaurer les couleurs originales
+    for (let i = 0; i < color.count; i++) {
+      color.setXYZ(
+        i,
+        originalColors[i * 3],
+        originalColors[i * 3 + 1],
+        originalColors[i * 3 + 2],
+      );
+    }
 
-      for (let i = 0; i < color.count; i++) {
-        color.setXYZ(
-          i,
-          originalColors[i * 3],
-          originalColors[i * 3 + 1],
-          originalColors[i * 3 + 2],
-        );
-      }
+    /*
+     * ==============================================
+     * SYSTEME 1 : zone_bit + _ZONES
+     * Scapula, etc.
+     * ==============================================
+     */
 
-      // No zone_t = normal landmark.
-      // Original colors remain untouched.
-      if (
-        !selectedZone ||
-        !longitudinalRange ||
-        longitudinalRange.length <= 0
-      ) {
-        color.needsUpdate = true;
-        return;
-      }
-
-      // ----------------------------------------
-      // Apply the selected anatomical zone.
-      // ----------------------------------------
+    if (
+      selectedZoneBit !== null &&
+      zones
+    ) {
+      const mask = 1 << selectedZoneBit;
 
       for (let i = 0; i < position.count; i++) {
-        const axisValue = getAxisValue(position as THREE.BufferAttribute, i);
+        const vertexZones = zones.getX(i);
 
-        const t =
-          (axisValue - longitudinalRange.min) / longitudinalRange.length;
-
-        if (t < selectedZone[0] || t > selectedZone[1]) {
+        if ((vertexZones & mask) === 0) {
           continue;
         }
 
@@ -414,16 +428,79 @@ function AnatomicalScene({
           originalColors[i * 3 + 2],
         );
 
-        // Client specification:
-        // yellow #F2C94C, 72% blend.
         originalColor.lerp(highlightColor, 0.72);
 
-        color.setXYZ(i, originalColor.r, originalColor.g, originalColor.b);
+        color.setXYZ(
+          i,
+          originalColor.r,
+          originalColor.g,
+          originalColor.b,
+        );
       }
 
       color.needsUpdate = true;
-    });
-  }, [scene, selectedZone, longitudinalRange, getAxisValue]);
+
+      return;
+    }
+
+    /*
+     * ==============================================
+     * SYSTEME 2 : zone_t
+     * Clavicule
+     * ==============================================
+     */
+
+    if (
+      selectedZone &&
+      longitudinalRange &&
+      longitudinalRange.length > 0
+    ) {
+      for (let i = 0; i < position.count; i++) {
+        const axisValue = getAxisValue(
+          position as THREE.BufferAttribute,
+          i,
+        );
+
+        const t =
+          (axisValue - longitudinalRange.min) /
+          longitudinalRange.length;
+
+        if (
+          t < selectedZone[0] ||
+          t > selectedZone[1]
+        ) {
+          continue;
+        }
+
+        const originalColor = new THREE.Color(
+          originalColors[i * 3],
+          originalColors[i * 3 + 1],
+          originalColors[i * 3 + 2],
+        );
+
+        originalColor.lerp(
+          highlightColor,
+          0.72,
+        );
+
+        color.setXYZ(
+          i,
+          originalColor.r,
+          originalColor.g,
+          originalColor.b,
+        );
+      }
+    }
+
+    color.needsUpdate = true;
+  });
+}, [
+  scene,
+  selectedZone,
+  selectedZoneBit,
+  longitudinalRange,
+  getAxisValue,
+]);
 
   /* ----------------------------------------------------------
      CENTER + NORMALIZE MODEL

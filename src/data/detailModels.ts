@@ -80,6 +80,66 @@ export const detailModels = {
         cameraUp: [0, 1, 0],
       },
     ],
+
+    features: {
+      landmarks: true,
+      zones: true,
+      standardViews: true,
+      orientationLabels: true,
+      mirror: true,
+      autoRotate: true,
+    },
+  },
+
+  Scapula: {
+    asset: require("../../assets/models/details/scapula_droite.glb"),
+
+    initialRotation: {
+      x: 0,
+      y: 0,
+    },
+
+    longitudinalAxis: "y",
+
+    views: [
+      {
+        id: "anterieure",
+        label: "Antérieure",
+        cameraDirection: [0, 0, 1],
+        cameraUp: [0, 1, 0],
+      },
+      {
+        id: "posterieure",
+        label: "Postérieure",
+        cameraDirection: [0, 0, -1],
+        cameraUp: [0, 1, 0],
+      },
+      {
+        id: "laterale",
+        label: "Latérale",
+        cameraDirection: [-0.994, -0.101, -0.04],
+        cameraUp: [0, 1, 0],
+      },
+      {
+        id: "mediale",
+        label: "Médiale",
+        cameraDirection: [1, 0, 0],
+        cameraUp: [0, 1, 0],
+      },
+      {
+        id: "superieure",
+        label: "Supérieure",
+        cameraDirection: [0, 1, 0],
+        cameraUp: [0, 0, -1],
+      },
+      {
+        id: "inferieure",
+        label: "Inférieure",
+        cameraDirection: [0, -1, 0],
+        cameraUp: [0, 0, 1],
+      },
+    ],
+
     features: {
       landmarks: true,
       zones: true,
