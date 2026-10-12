@@ -323,7 +323,5 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
 
-  actions: {
-    gap: 10,
-  },
+ 
 });

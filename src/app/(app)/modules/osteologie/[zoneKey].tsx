@@ -16,7 +16,6 @@ import {
 } from "../../../../components/3d/LearningSkeletonViewer";
 import { Button } from "../../../../components/ui/Button";
 import { DraggableSheet } from "../../../../components/ui/DraggableSheet";
-import { PillToggle } from "../../../../components/ui/PillToggle";
 import {
   accents,
   colors,
@@ -33,63 +32,56 @@ import {
   subscribeToQuizResult,
 } from "../../../../lib/firestore";
 // Default selected bone per zone, matching the README's example (Humérus, 3/6 for sup)
-const DEFAULT_BONE_INDEX: Record<ZoneKey, number> = { sup: 2, ax: 0, inf: 0 };
-
+const DEFAULT_BONE_INDEX: Record<ZoneKey, number> = {
+  sup: 0,
+  ax: 0,
+  inf: 0,
+};
 function angleAndLength(
-  from: { x: number; y: number },
-  to: { x: number; y: number },
+  from: { left: number; top: number },
+  to: { left: number; top: number },
 ) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  return { length, angle };
+  const dx = to.left - from.left;
+  const dy = to.top - from.top;
+  return {
+    length: Math.sqrt(dx * dx + dy * dy),
+    angle: (Math.atan2(dy, dx) * 180) / Math.PI,
+  };
 }
-
 export default function SubmoduleDetailScreen() {
   const insets = useSafeAreaInsets();
   const { zoneKey } = useLocalSearchParams<{ zoneKey: string }>();
   const zone = (zoneKey as ZoneKey) ?? "sup";
   const detail = ZONE_DETAILS[zone] ?? ZONE_DETAILS.sup;
   const accent = accents[detail.accentKey];
-
   const [selectedIndex, setSelectedIndex] = useState(
     DEFAULT_BONE_INDEX[zone] ?? 0,
   );
   const [labelsVisible, setLabelsVisible] = useState(true);
   const [sectionView, setSectionView] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
-
   const selectedBone = detail.bones[selectedIndex];
   const { user } = useAuth();
-
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
-
   React.useEffect(() => {
     if (user) markBoneViewed(user.uid, zone, selectedBone.id);
   }, [user, zone, selectedBone.id]);
-
   React.useEffect(() => {
     if (!user) {
       setQuizResult(null);
       return;
     }
-
     const unsubscribe = subscribeToQuizResult(user.uid, zone, setQuizResult);
-
     return unsubscribe;
   }, [user, zone]);
-
   const onStageLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     setStageSize({ width, height });
   }, []);
-
   const pct = (p: { x: number; y: number }) => ({
     left: (p.x / 100) * stageSize.width,
     top: (p.y / 100) * stageSize.height,
   });
-
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
       {/* Header */}
@@ -116,84 +108,92 @@ export default function SubmoduleDetailScreen() {
           <Share2 size={17} color={colors.ink} strokeWidth={2} />
         </Pressable>
       </View>
+      {/* Dedicated toolbar, outside the 3D canvas so it never covers the skull */}
+      <View style={styles.stageContainer}>
+        <View style={styles.togglesRow}>
+          <Pressable
+            onPress={() => setLabelsVisible((v) => !v)}
+            style={[
+              styles.viewerToggle,
+              !labelsVisible && styles.viewerToggleInactive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.viewerToggleText,
+                !labelsVisible && styles.viewerToggleTextInactive,
+              ]}
+            >
+              Étiquettes
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setSectionView((v) => !v)}
+            style={[
+              styles.viewerToggle,
+              !sectionView && styles.viewerToggleInactive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.viewerToggleText,
+                !sectionView && styles.viewerToggleTextInactive,
+              ]}
+            >
+              Isoler
+            </Text>
+          </Pressable>
+        </View>
+        {/* 3D stage — its layout coordinates belong to the canvas only */}
+        <View style={styles.skeletonStage} onLayout={onStageLayout}>
+          <LinearGradient
+            colors={[colors.stageWarmTop, colors.stageWarmBottomAlt]}
+            style={StyleSheet.absoluteFill}
+          />
+          <LearningSkeletonViewer
+            activeZone={zone}
+            accentColor={accent.color}
+            selectedBoneId={selectedBone.id}
+            isolateSelection={sectionView}
+            interactive
+            framing="small"
+          />
+          {/* Bone label chips + leader lines */}
+          {labelsVisible &&
+            stageSize.width > 0 &&
+            detail.bones.map((bone, i) => {
+              const isSelected = i === selectedIndex;
 
-      {/* 3D stage, edge to edge, no radius */}
-      <View style={{ flex: 1 }} onLayout={onStageLayout}>
-        <LinearGradient
-          colors={[colors.stageWarmTop, colors.stageWarmBottomAlt]}
-          style={StyleSheet.absoluteFill}
-        />
-        <LearningSkeletonViewer
-  activeZone={zone}
-  accentColor="#E53935"
-  interactive
-  framing="small"
-/>
-
-        {/* Bone label chips + leader lines */}
-        {labelsVisible &&
-          stageSize.width > 0 &&
-          detail.bones.map((bone, i) => {
-            const isSelected = i === selectedIndex;
-            const anchorPx = pct(bone.anchor);
-            const chipPx = pct(bone.chip);
-            const { length, angle } = angleAndLength(anchorPx, chipPx);
-
-            return (
-              <React.Fragment key={bone.id}>
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.leaderLine,
-                    {
-                      left: anchorPx.left,
-                      top: anchorPx.top,
-                      width: length,
-                      transform: [{ rotate: `${angle}deg` }],
-                    },
-                  ]}
-                />
-                <Pressable
-                  onPress={() => setSelectedIndex(i)}
-                  style={[
-                    styles.chip,
-                    { left: chipPx.left - 40, top: chipPx.top - 14 },
-                    isSelected && {
-                      backgroundColor: accent.color,
-                      borderColor: accent.color,
-                    },
-                  ]}
-                >
-                  <Text
+              const chipPx = pct(bone.chip);
+              return (
+                <React.Fragment key={bone.id}>
+                  <Pressable
+                    onPress={() => setSelectedIndex(i)}
                     style={[
-                      styles.chipText,
-                      isSelected && { color: colors.surface },
+                      styles.chip,
+                      { left: chipPx.left - 40, top: chipPx.top - 14 },
+                      isSelected && {
+                        backgroundColor: accent.color,
+                        borderColor: accent.color,
+                      },
                     ]}
                   >
-                    {bone.name}
-                  </Text>
-                </Pressable>
-              </React.Fragment>
-            );
-          })}
-
-        {/* Bottom-left pill toggles */}
-        <View style={styles.togglesRow}>
-          <PillToggle
-            label="Étiquettes"
-            active={labelsVisible}
-            onPress={() => setLabelsVisible((v) => !v)}
-          />
-          <PillToggle
-            label="Coupe"
-            active={sectionView}
-            onPress={() => setSectionView((v) => !v)}
-          />
+                    <Text
+                      style={[
+                        styles.chipText,
+                        isSelected && { color: colors.surface },
+                      ]}
+                    >
+                      {bone.name}
+                    </Text>
+                  </Pressable>
+                </React.Fragment>
+              );
+            })}
         </View>
       </View>
-
       {/* Bottom sheet — drag up to expand */}
-      <DraggableSheet collapsedHeight={285} expandedHeight={480}>
+      <DraggableSheet collapsedHeight={280} expandedHeight={480}>
         <View style={styles.sheetHeaderRow}>
           <Text style={typography.sheetTitle}>{selectedBone.name}</Text>
           <Text style={styles.counter}>
@@ -206,7 +206,6 @@ export default function SubmoduleDetailScreen() {
         <View style={styles.quizStatsCard}>
           <View style={styles.quizStatsHeader}>
             <Text style={styles.quizStatsTitle}>Quiz</Text>
-
             {quizResult && (
               <Text
                 style={[
@@ -220,30 +219,22 @@ export default function SubmoduleDetailScreen() {
               </Text>
             )}
           </View>
-
           {quizResult ? (
             <View style={styles.quizStatsRow}>
               <View style={styles.quizStatItem}>
                 <Text style={styles.quizStatLabel}>Meilleur score</Text>
-
                 <Text style={styles.quizStatValue}>
                   {quizResult.bestScore}/{quizResult.bestTotal}
                 </Text>
               </View>
-
               <View style={styles.quizStatDivider} />
-
               <View style={styles.quizStatItem}>
                 <Text style={styles.quizStatLabel}>Tentatives</Text>
-
                 <Text style={styles.quizStatValue}>{quizResult.attempts}</Text>
               </View>
-
               <View style={styles.quizStatDivider} />
-
               <View style={styles.quizStatItem}>
                 <Text style={styles.quizStatLabel}>Dernier score</Text>
-
                 <Text style={styles.quizStatValue}>
                   {quizResult.lastScore}/{quizResult.lastTotal}
                 </Text>
@@ -274,7 +265,6 @@ export default function SubmoduleDetailScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
@@ -332,12 +322,42 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: colors.ink,
   },
+  stageContainer: {
+    flex: 1,
+    backgroundColor: colors.stageWarmTop,
+  },
+  skeletonStage: {
+    flex: 1,
+  },
   togglesRow: {
-    position: "absolute",
-    bottom: 14,
-    left: 14,
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
+
+    backgroundColor: colors.stageWarmTop,
+  },
+  viewerToggle: {
+    backgroundColor: "#0B4A6F",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#0B4A6F",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewerToggleInactive: {
+    backgroundColor: "#EAF0F4",
+    borderColor: "#0B4A6F",
+  },
+  viewerToggleText: {
+    fontFamily: "IBMPlexSans_600SemiBold",
+    fontSize: 12,
+    color: "#FFFFFF",
+  },
+  viewerToggleTextInactive: {
+    color: "#0B4A6F",
   },
   sheetHeaderRow: {
     flexDirection: "row",
@@ -374,55 +394,46 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.fillSoft,
   },
-
   quizStatsHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
   },
-
   quizStatsTitle: {
     fontFamily: "IBMPlexSans_600SemiBold",
     fontSize: 14,
     color: colors.ink,
   },
-
   quizStatsPercent: {
     fontFamily: "IBMPlexSans_700Bold",
     fontSize: 15,
   },
-
   quizStatsRow: {
     flexDirection: "row",
     alignItems: "center",
   },
-
   quizStatItem: {
     flex: 1,
     alignItems: "center",
   },
-
   quizStatLabel: {
     fontFamily: "IBMPlexSans_400Regular",
     fontSize: 10.5,
     color: colors.muted,
     textAlign: "center",
   },
-
   quizStatValue: {
     marginTop: 4,
     fontFamily: "IBMPlexSans_700Bold",
     fontSize: 16,
     color: colors.ink,
   },
-
   quizStatDivider: {
     width: 1,
     height: 30,
     backgroundColor: colors.border,
   },
-
   quizNoResult: {
     fontFamily: "IBMPlexSans_400Regular",
     fontSize: 13,

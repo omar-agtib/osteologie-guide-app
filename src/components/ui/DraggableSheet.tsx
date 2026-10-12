@@ -1,19 +1,19 @@
+
 import React from "react";
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { colors, shadows } from "../../constants/theme";
 
-const SCREEN_HEIGHT = Dimensions.get("window").height;
+import { colors, shadows } from "../../constants/theme";
 
 type Props = {
   children: React.ReactNode;
-  collapsedHeight: number; // height when at rest (what you see by default)
-  expandedHeight: number; // height when dragged up fully
+  collapsedHeight: number;
+  expandedHeight: number;
 };
 
 export function DraggableSheet({
@@ -21,20 +21,35 @@ export function DraggableSheet({
   collapsedHeight,
   expandedHeight,
 }: Props) {
-  // translateY is negative-up: 0 = collapsed position, negative = dragged up
+  // Distance the sheet can move upwards.
+  const maxDrag = Math.max(0, expandedHeight - collapsedHeight);
+
   const translateY = useSharedValue(0);
-  const maxDrag = collapsedHeight - expandedHeight; // negative number
+  const gestureStart = useSharedValue(0);
 
   const pan = Gesture.Pan()
-    .onUpdate((e) => {
-      const next = e.translationY;
-      // Clamp between fully expanded (maxDrag) and collapsed (0), with a little rubber-band past 0
-      translateY.value = Math.min(20, Math.max(maxDrag, next));
+    .onBegin(() => {
+      gestureStart.value = translateY.value;
     })
-    .onEnd((e) => {
-      // Snap to whichever state is closer, factoring in velocity for a natural flick
-      const shouldExpand = translateY.value < maxDrag / 2 || e.velocityY < -500;
-      translateY.value = withSpring(shouldExpand ? maxDrag : 0, {
+    .onUpdate((event) => {
+      const next = gestureStart.value + event.translationY;
+
+      translateY.value = Math.max(
+        -maxDrag,
+        Math.min(0, next)
+      );
+    })
+    .onEnd((event) => {
+      const shouldExpand =
+        translateY.value < -maxDrag / 2 ||
+        event.velocityY < -500;
+
+      const shouldCollapse = event.velocityY > 500;
+
+      const target =
+        shouldCollapse ? 0 : shouldExpand ? -maxDrag : 0;
+
+      translateY.value = withSpring(target, {
         damping: 18,
         stiffness: 180,
       });
@@ -42,27 +57,52 @@ export function DraggableSheet({
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
-    height: expandedHeight,
   }));
 
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View style={[styles.sheet, shadows.bottomSheet, animatedStyle]}>
-        <Animated.View style={styles.grabHandle} />
-        {children}
-      </Animated.View>
-    </GestureDetector>
+    <View
+      style={[
+        styles.container,
+        { height: collapsedHeight },
+      ]}
+    >
+      <GestureDetector gesture={pan}>
+        <Animated.View
+          style={[
+            styles.sheet,
+            shadows.bottomSheet,
+            { height: expandedHeight },
+            animatedStyle,
+          ]}
+        >
+          <View style={styles.grabHandle} />
+          {children}
+        </Animated.View>
+      </GestureDetector>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    width: "100%",
+    position: "relative",
+    overflow: "visible",
+  },
+
   sheet: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+
     backgroundColor: colors.surface,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     paddingHorizontal: 24,
     paddingTop: 14,
   },
+
   grabHandle: {
     width: 42,
     height: 4,

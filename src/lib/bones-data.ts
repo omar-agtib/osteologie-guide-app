@@ -61,7 +61,7 @@ export const ZONE_DETAILS: Record<ZoneKey, ZoneDetail> = {
       },
       {
         id: "carpe",
-        name: "Carpe",
+        name: "squelette de la main",
         description:
           "Huit petits os courts formant le poignet, entre l'avant-bras et la main.",
         anchor: { x: 52, y: 84 },

@@ -24,7 +24,7 @@ export function useSkeletonGestures(options: Options) {
     let hadMultipleTouches = false;
     let pinching = false;
     let initialDistance = 0;
-    let fingerId: number | null = null;
+    let fingerId: string | null = null;
 
     const point = (touch: { locationX: number; locationY: number }): Point => ({
       x: touch.locationX,

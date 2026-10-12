@@ -14,6 +14,14 @@ export default function ModeLibreScreen() {
 
   const [resetKey, setResetKey] = useState(0);
 
+  const handleGoBack = () => {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace("/home");
+  }
+};
+
   return (
     <View
       style={{
@@ -37,7 +45,7 @@ export default function ModeLibreScreen() {
       >
         <Pressable
           style={styles.iconBtn}
-          onPress={() => router.back()}
+          onPress={handleGoBack}
           hitSlop={8}
         >
           <ChevronLeft size={19} color={colors.ink} strokeWidth={2.2} />

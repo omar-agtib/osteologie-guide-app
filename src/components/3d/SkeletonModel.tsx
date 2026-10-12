@@ -2,12 +2,14 @@ import { useGLTF } from "@react-three/drei/native";
 import { useFrame } from "@react-three/fiber/native";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-
+import type { GLTF } from "three-stdlib";
 const homeAsset = require("../../../assets/models/human-skeleton-mobile_v2.glb");
 type Props = { asset?: number; onLoaded?: () => void };
 
 export default function SkeletonModel({ asset = homeAsset, onLoaded }: Props) {
-  const { scene } = useGLTF(asset);
+  const { scene } = useGLTF(
+  asset as unknown as string
+) as GLTF;
   const model = useMemo(() => {
     const clone = scene.clone(true);
     const material = new THREE.MeshStandardMaterial({

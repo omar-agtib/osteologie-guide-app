@@ -3,7 +3,7 @@ import { Canvas, useFrame } from "@react-three/fiber/native";
 import { useEffect, useMemo, useRef } from "react";
 import { PanResponder, View } from "react-native";
 import * as THREE from "three";
-
+import type { GLTF } from "three-stdlib";
 const skeletonAsset = require("../../../assets/models/human-skeleton-mobile_v2.glb");
 
 export type ZoneKey = "sup" | "ax" | "inf";
@@ -13,6 +13,8 @@ type Props = {
   accentColor: string;
   interactive?: boolean;
   framing?: "small" | "normal";
+  selectedBoneId?: string;
+  isolateSelection?: boolean;
 };
 
 const DEFAULT_COLOR = "#9A9A9A";
@@ -23,10 +25,6 @@ const DEFAULT_COLOR = "#9A9A9A";
  * try -0.15 / -0.25 / 0.15
  */
 const FRONT_ROTATION_Y = -0.15;
-
-
-
-
 
 const UPPER_BONES = new Set([
   "human_clavicle_bone_collarbone_01_001",
@@ -73,6 +71,45 @@ const AXIAL_BONES = new Set([
   "ribs_connection",
 ]);
 
+const BONE_MESH_NAMES: Record<string, string[]> = {
+  clavicule: [
+    "human_clavicle_bone_collarbone_01_001",
+    "human_clavicle_bone_collarbone_01_002",
+  ],
+  scapula: ["human_scapula_bone_003", "human_scapula_bone_004"],
+  humerus: ["human_humerus_01_001", "human_humerus_01_002"],
+  "radius-ulna": [
+    "human_radial_bone_001",
+    "human_radial_bone_002",
+    "human_ulna_bone_01_001",
+    "human_ulna_bone_01_002",
+  ],
+  carpe: [
+    "human_hand_bones_anatomy_01_low001",
+    "human_hand_bones_anatomy_01_low002",
+  ],
+  crane: ["human_skull", "human_jaw", "upper_teeth", "lower_teeth"],
+  rachis: ["spinal_bones", "spinal_disks", "neck_discs_001"],
+  thorax: ["ribcage_001", "ribs_connection"],
+  bassin: ["pelvis_male_01_001", "pelvis_male_02_001", "pubic_cone"],
+  femur: ["human_femur_01_001", "human_femur_01_002"],
+  "tibia-fibula": [
+    "tibia_bone_01_001",
+    "tibia_bone_01_002",
+    "human_fibula_bone_01_002",
+    "human_fibula_bone_01_003",
+  ],
+};
+
+function isSelectedBone(meshName: string, selectedBoneId?: string): boolean {
+  if (!selectedBoneId) return false;
+
+  const names = BONE_MESH_NAMES[selectedBoneId];
+
+  return names?.includes(meshName.toLowerCase()) ?? false;
+}
+
+
 function getBoneZone(object: THREE.Object3D): ZoneKey | null {
   const meshName = (object.name || "").toLowerCase();
 
@@ -80,22 +117,34 @@ function getBoneZone(object: THREE.Object3D): ZoneKey | null {
   if (LOWER_BONES.has(meshName)) return "inf";
   if (AXIAL_BONES.has(meshName)) return "ax";
 
-  // keep anything unknown gray
+  // Sternum and its anatomical parts.
+  if (
+    meshName.includes("sternum") ||
+    meshName.includes("manubrium") ||
+    meshName.includes("xiphoid") ||
+    meshName.includes("xiphoide")
+  ) {
+    return "ax";
+  }
+
   return null;
 }
+
 function RealSkeleton({
   activeZone,
   accentColor,
   rotationY,
+  selectedBoneId,
+  isolateSelection,
 }: {
   activeZone: ZoneKey;
   accentColor: string;
   rotationY: React.MutableRefObject<number>;
+  selectedBoneId?: string;
+  isolateSelection?: boolean;
 }) {
-  const { scene } = useGLTF(skeletonAsset);
+  const { scene } = useGLTF(skeletonAsset as unknown as string) as GLTF;
   const groupRef = useRef<THREE.Group>(null);
-
-
 
   const model = useMemo(() => {
     const clone = scene.clone(true);
@@ -104,7 +153,6 @@ function RealSkeleton({
       if (!(object as THREE.Mesh).isMesh) return;
 
       const mesh = object as THREE.Mesh;
-
 
       mesh.material = new THREE.MeshStandardMaterial({
         color: DEFAULT_COLOR,
@@ -125,16 +173,21 @@ function RealSkeleton({
     const center = box.getCenter(new THREE.Vector3());
 
     const maxDimension = Math.max(size.x, size.y, size.z);
-    const scale = maxDimension > 0 ? 3 / maxDimension : 1;
+    const SKELETON_SIZE = 3.5;
+
+const scale =
+  maxDimension > 0 ? SKELETON_SIZE / maxDimension : 1;
 
     wrapper.scale.setScalar(scale);
 
     // Center model
-    wrapper.position.set(
-      -center.x * scale,
-      -center.y * scale - 0.15, // move slightly down to visually center it
-      -center.z * scale,
-    );
+    
+wrapper.position.set(
+  -center.x * scale,
+  -center.y * scale + 0.05,
+  -center.z * scale,
+);
+
 
     return wrapper;
   }, [scene]);
@@ -146,17 +199,27 @@ function RealSkeleton({
       const mesh = object as THREE.Mesh;
       const material = mesh.material as THREE.MeshStandardMaterial;
 
+      const name = mesh.name.toLowerCase();
       const zone = getBoneZone(mesh);
 
-      if (zone === activeZone) {
-        material.color.set(accentColor);
-      } else {
-        material.color.set(DEFAULT_COLOR);
-      }
+      const hasSelection = Boolean(selectedBoneId);
+      const isSelected = isSelectedBone(name, selectedBoneId);
 
+      // Sans os sélectionné : coloration de la zone entière.
+      // Avec sélection : coloration uniquement des os concernés.
+      const shouldHighlight = hasSelection ? isSelected : zone === activeZone;
+
+      material.color.set(shouldHighlight ? accentColor : DEFAULT_COLOR);
+
+      // Mode isolation : les autres os deviennent discrets.
+      material.transparent =
+        Boolean(isolateSelection) && hasSelection && !isSelected;
+
+      material.opacity = material.transparent ? 0.15 : 1;
+      material.depthWrite = !material.transparent;
       material.needsUpdate = true;
     });
-  }, [model, activeZone, accentColor]);
+  }, [model, activeZone, accentColor, selectedBoneId, isolateSelection]);
 
   useFrame(() => {
     if (!groupRef.current) return;
@@ -180,6 +243,8 @@ export function LearningSkeletonViewer({
   accentColor,
   interactive = true,
   framing = "small",
+  selectedBoneId,
+  isolateSelection = false,
 }: Props) {
   const baseRotation = FRONT_ROTATION_Y;
   const rotationY = useRef(baseRotation);
@@ -224,6 +289,8 @@ export function LearningSkeletonViewer({
           activeZone={activeZone}
           accentColor={accentColor}
           rotationY={rotationY}
+          selectedBoneId={selectedBoneId}
+          isolateSelection={isolateSelection}
         />
       </Canvas>
     </View>

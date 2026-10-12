@@ -1,13 +1,18 @@
 export type IdentificationLandmark = {
   number: number;
+
   answers: string[];
 };
 
 export type IdentificationExercise = {
   id: string;
+
   title: string;
+
   subtitle: string;
+
   image: number;
+
   landmarks: IdentificationLandmark[];
 };
 
@@ -15,20 +20,27 @@ type LandmarkMap = Record<number, string[]>;
 
 function pick(map: LandmarkMap, numbers: number[]): IdentificationLandmark[] {
   return numbers
+
     .filter((number) => map[number])
+
     .map((number) => ({
       number,
+
       answers: map[number],
     }));
 }
 
 // ======================================================
+
 // OS COXAL
+
 // ======================================================
 
 const COXAL: LandmarkMap = {
   1: ["ilium"],
+
   2: ["ischium"],
+
   3: ["pubis"],
 
   4: ["face latérale", "face laterale"],
@@ -37,8 +49,11 @@ const COXAL: LandmarkMap = {
 
   6: [
     "lignes glutéales",
+
     "lignes gluteales",
+
     "lignes semi-circulaires",
+
     "lignes semicirculaires",
   ],
 
@@ -50,21 +65,29 @@ const COXAL: LandmarkMap = {
 
   10: [
     "partie périphérique de l'acétabulum",
+
     "partie peripherique de l'acetabulum",
+
     "surface articulaire de l'acétabulum",
+
     "surface articulaire de l'acetabulum",
   ],
 
   11: [
     "arrière-fond de la cavité acétabulaire",
+
     "arriere-fond de la cavite acetabulaire",
+
     "arrière-fond de l'acétabulum",
+
     "arriere-fond de l'acetabulum",
   ],
 
   12: [
     "ligament de la tête fémorale",
+
     "ligament de la tete femorale",
+
     "ligament rond",
   ],
 
@@ -76,15 +99,21 @@ const COXAL: LandmarkMap = {
 
   16: [
     "branches de l'ischium",
+
     "branches de l’ischium",
+
     "branche ascendante et descendante de l'ischium",
+
     "branche ascendante et descendante de l’ischium",
   ],
 
   17: [
     "tubérosité ischiatique",
+
     "tuberosite ischiatique",
+
     "tubérosité de l'ischium",
+
     "tuberosite de l'ischium",
   ],
 
@@ -94,8 +123,11 @@ const COXAL: LandmarkMap = {
 
   20: [
     "ligne arquée de l'ilium",
+
     "ligne arquee de l'ilium",
+
     "ligne innominée",
+
     "ligne innominee",
   ],
 
@@ -111,13 +143,17 @@ const COXAL: LandmarkMap = {
 
   26: [
     "épine iliaque postéro-supérieure",
+
     "epine iliaque postero-superieure",
+
     "EIPS",
   ],
 
   27: [
     "épine iliaque antéro-supérieure",
+
     "epine iliaque antero-superieure",
+
     "EIAS",
   ],
 
@@ -125,16 +161,23 @@ const COXAL: LandmarkMap = {
 
   29: [
     "incisure inter-épineuse antérieure",
+
     "incisure inter-epineuse anterieure",
   ],
 
   30: [
     "épine iliaque antéro-inférieure",
+
     "epine iliaque antero-inferieure",
+
     "EIAI",
   ],
 
-  31: ["éminence ilio-pectinée", "eminence ilio-pectinee"],
+  31: [
+    "éminence ilio-pubienne",
+    "eminence ilio-pubienne",
+    "éminence ilio-pectinée",
+  ],
 
   32: ["surface pectinéale", "surface pectineale"],
 
@@ -144,12 +187,15 @@ const COXAL: LandmarkMap = {
 
   35: [
     "incisure inter-épineuse postérieure",
+
     "incisure inter-epineuse posterieure",
   ],
 
   36: [
     "épine iliaque postéro-inférieure",
+
     "epine iliaque postero-inferieure",
+
     "EIPI",
   ],
 
@@ -165,7 +211,9 @@ const COXAL: LandmarkMap = {
 };
 
 // ======================================================
+
 // FÉMUR
+
 // ======================================================
 
 const FEMUR: LandmarkMap = {
@@ -176,12 +224,16 @@ const FEMUR: LandmarkMap = {
   3: ["col fémoral", "col femoral", "col du fémur", "col du femur"],
 
   4: [
-    "ligne intertrochantérique postérieure",
+    "crête intertrochantérique",
+    "crête intertrochantérique postérieure",
+
     "ligne intertrochanterique posterieure",
   ],
 
   5: [
-    "crête intertrochantérique antérieure",
+    "ligne intertrochantérique",
+    "ligne intertrochantérique antérieure",
+
     "crete intertrochanterique anterieure",
   ],
 
@@ -189,7 +241,9 @@ const FEMUR: LandmarkMap = {
 
   7: [
     "fossette digitale",
+
     "face médiale du grand trochanter",
+
     "face mediale du grand trochanter",
   ],
 
@@ -207,15 +261,21 @@ const FEMUR: LandmarkMap = {
 
   14: [
     "lèvre médiale de la ligne âpre",
+
     "levre mediale de la ligne apre",
+
     "lèvre médiale",
+
     "levre mediale",
   ],
 
   15: [
     "lèvre latérale de la ligne âpre",
+
     "levre laterale de la ligne apre",
+
     "lèvre latérale",
+
     "levre laterale",
   ],
 
@@ -239,6 +299,7 @@ const FEMUR: LandmarkMap = {
 
   25: [
     "tubercule supracondylaire latéral",
+
     "tubercule supracondylaire lateral",
   ],
 
@@ -248,7 +309,9 @@ const FEMUR: LandmarkMap = {
 };
 
 // ======================================================
+
 // PATELLA
+
 // ======================================================
 
 const PATELLA: LandmarkMap = {
@@ -266,7 +329,9 @@ const PATELLA: LandmarkMap = {
 };
 
 // ======================================================
+
 // TIBIA
+
 // ======================================================
 
 const TIBIA: LandmarkMap = {
@@ -274,7 +339,9 @@ const TIBIA: LandmarkMap = {
 
   2: [
     "surfaces articulaires tibiales supérieures",
+
     "surfaces articulaires tibiales superieures",
+
     "plateaux tibiaux",
   ],
 
@@ -282,15 +349,21 @@ const TIBIA: LandmarkMap = {
 
   4: [
     "épines du tibia",
+
     "epines du tibia",
+
     "épines tibiales",
+
     "epines tibiales",
   ],
 
   5: [
     "tubérosité du tibia",
+
     "tuberosite du tibia",
+
     "tubérosité tibiale",
+
     "tuberosite tibiale",
   ],
 
@@ -298,7 +371,9 @@ const TIBIA: LandmarkMap = {
 
   7: [
     "surface articulaire avec la fibula",
+
     "surface fibulaire",
+
     "facette articulaire fibulaire",
   ],
 
@@ -314,8 +389,11 @@ const TIBIA: LandmarkMap = {
 
   13: [
     "face postérieure",
+
     "face posterieure",
+
     "face postérieure de la diaphyse",
+
     "face posterieure de la diaphyse",
   ],
 
@@ -327,11 +405,13 @@ const TIBIA: LandmarkMap = {
 
   17: [
     "face antérieure de l'épiphyse distale",
+
     "face anterieure de l'epiphyse distale",
   ],
 
   18: [
     "face postérieure de l'épiphyse distale",
+
     "face posterieure de l'epiphyse distale",
   ],
 
@@ -339,23 +419,29 @@ const TIBIA: LandmarkMap = {
 
   20: [
     "sillon du long fléchisseur de l'hallux",
+
     "sillon du long flechisseur de l'hallux",
   ],
 
   21: [
     "face médiale de l'épiphyse distale",
+
     "face mediale de l'epiphyse distale",
   ],
 
   22: [
     "malléole médiale",
+
     "malleole mediale",
+
     "malléole interne",
+
     "malleole interne",
   ],
 
   23: [
     "face latérale de l'épiphyse distale",
+
     "face laterale de l'epiphyse distale",
   ],
 
@@ -365,31 +451,41 @@ const TIBIA: LandmarkMap = {
 
   26: [
     "surface articulaire de la malléole médiale",
+
     "surface articulaire de la malleole mediale",
   ],
 };
 
 // ======================================================
+
 // FIBULA
+
 // ======================================================
 
 const FIBULA: LandmarkMap = {
   1: [
     "tête de la fibula",
+
     "tete de la fibula",
+
     "tête fibulaire",
+
     "tete fibulaire",
   ],
 
   2: [
     "surface articulaire de la tête fibulaire",
+
     "surface articulaire de la tete fibulaire",
   ],
 
   3: [
     "apex de la tête",
+
     "apex de la tete",
+
     "apophyse styloïde",
+
     "apophyse styloide",
   ],
 
@@ -399,14 +495,17 @@ const FIBULA: LandmarkMap = {
 
   6: ["face latérale", "face laterale"],
 
-  7: ["sillon malléolaire latéral", "sillon malleolaire lateral"],
+  7: ["crête médiale", "crete mediale"],
 
   8: ["face postérieure", "face posterieure"],
 
   9: [
     "aire médiale",
+
     "aire mediale",
+
     "aire du muscle tibial postérieur",
+
     "aire du muscle tibial posterieur",
   ],
 
@@ -418,8 +517,11 @@ const FIBULA: LandmarkMap = {
 
   13: [
     "malléole latérale",
+
     "malleole laterale",
+
     "épiphyse distale",
+
     "epiphyse distale",
   ],
 
@@ -427,12 +529,15 @@ const FIBULA: LandmarkMap = {
 
   15: [
     "surface articulaire de la malléole latérale",
+
     "surface articulaire de la malleole laterale",
   ],
 };
 
 // ======================================================
+
 // PIED
+
 // ======================================================
 
 const FOOT: LandmarkMap = {
@@ -446,15 +551,21 @@ const FOOT: LandmarkMap = {
 
   5: [
     "trochlée astragalienne",
+
     "trochlee astragalienne",
+
     "trochlée du talus",
+
     "trochlee du talus",
   ],
 
   6: [
     "os naviculaire",
+
     "naviculaire",
+
     "scaphoïde tarsien",
+
     "scaphoide tarsien",
   ],
 
@@ -468,15 +579,21 @@ const FOOT: LandmarkMap = {
 
   11: [
     "tubérosité postérieure du calcanéum",
+
     "tuberosite posterieure du calcaneum",
+
     "tubérosité du calcanéum",
+
     "tuberosite du calcaneum",
   ],
 
   12: [
     "gouttière du calcanéum",
+
     "gouttiere du calcaneum",
+
     "gouttière de la face médiale du calcanéum",
+
     "gouttiere de la face mediale du calcaneum",
   ],
 
@@ -486,75 +603,129 @@ const FOOT: LandmarkMap = {
 
   15: [
     "cunéiforme médial",
+
     "cuneiforme medial",
+
     "os cunéiforme médial",
+
     "os cuneiforme medial",
   ],
 
   16: [
     "cunéiforme intermédiaire",
+
     "cuneiforme intermediaire",
+
     "os cunéiforme intermédiaire",
+
     "os cuneiforme intermediaire",
   ],
 
   17: [
     "cunéiforme latéral",
+
     "cuneiforme lateral",
+
     "os cunéiforme latéral",
+
     "os cuneiforme lateral",
   ],
 
   18: [
     "base du métatarsien",
+
     "base du metatarsien",
+
     "base des métatarsiens",
+
     "base des metatarsiens",
   ],
 
   19: [
     "tête du métatarsien",
+
     "tete du metatarsien",
+
     "tête des métatarsiens",
+
     "tete des metatarsiens",
   ],
 
   20: [
     "os sésamoïdes du pied",
+
     "os sesamoides du pied",
+
     "os sésamoïdes",
+
     "os sesamoides",
   ],
 };
+
 // ======================================================
+
 // CLAVICULE
+
 // ======================================================
 
 const CLAVICLE: LandmarkMap = {
   1: ["face supérieure"],
   2: ["face inférieure"],
-  3: ["gouttière du muscle subclavier", "gouttière subclavière"],
+  3: [
+    "sillon subclavier",
+    "sillon du muscle subclavier",
+    "gouttière subclavière",
+  ],
   4: ["empreinte du ligament costo-claviculaire"],
   5: ["empreinte des ligaments coraco-claviculaires"],
   6: ["tubercule conoïde"],
-  7: ["tubercule trapézoïde"],
+  7: ["ligne trapézoïde", "ligne trapezoide"],
   8: ["bord antérieur"],
-  9: ["muscle grand pectoral", "insertion du muscle grand pectoral"],
-  10: ["muscle deltoïde", "insertion du muscle deltoïde"],
+  9: [
+    "insertion du muscle grand pectoral",
+    "muscle grand pectoral",
+    "zone d'insertion du muscle grand pectoral",
+  ],
+  10: [
+    "insertion du muscle deltoïde",
+    "muscle deltoïde",
+    "zone d'insertion du muscle deltoïde",
+  ],
   11: ["bord postérieur"],
   12: [
-    "muscle sterno-cléido-mastoïdien",
     "insertion du muscle sterno-cléido-mastoïdien",
+    "muscle sterno-cléido-mastoïdien",
+    "zone d'insertion du muscle sterno-cléido-mastoïdien",
   ],
-  13: ["muscle trapèze", "insertion du muscle trapèze"],
-  14: ["épiphyse médiale", "épiphyse sternale", "extrémité sternale"],
-  15: ["surface articulaire avec le sternum", "facette articulaire sternale"],
-  16: ["épiphyse latérale", "épiphyse acromiale", "extrémité acromiale"],
-  17: ["facette articulaire avec l'acromion", "facette articulaire acromiale"],
+  13: [
+    "insertion du muscle trapèze",
+    "muscle trapèze",
+    "zone d'insertion du muscle trapèze",
+  ],
+  14: [
+    "épiphyse médiale",
+    "épiphyse sternale",
+    "extrémité sternale",
+    "extrémité médiale",
+  ],
+  15: [
+    "surface articulaire sternale",
+    "facette articulaire sternale",
+    "surface articulaire avec le sternum",
+  ],
+  16: [
+    "épiphyse latérale",
+    "épiphyse acromiale",
+    "extrémité acromiale",
+    "extrémité latérale",
+  ],
+  17: ["facette articulaire acromiale", "facette articulaire avec l'acromion"],
 };
 
 // ======================================================
+
 // SCAPULA
+
 // ======================================================
 
 const SCAPULA: LandmarkMap = {
@@ -564,9 +735,9 @@ const SCAPULA: LandmarkMap = {
 
   3: ["épine de la scapula"],
 
-  4: ["lèvre supérieure de l'épine", "lèvre supérieure"],
+  4: ["lèvre supérieure de l'épine", "levre superieure de l'epine", "lèvre supérieure"],
 
-  5: ["lèvre inférieure de l'épine", "lèvre inférieure"],
+  5: ["lèvre inférieure de l'épine", "levre inferieure de l'epine", "lèvre inférieure"],
 
   6: ["acromion"],
 
@@ -574,21 +745,21 @@ const SCAPULA: LandmarkMap = {
 
   8: ["fosse infra-épineuse", "fosse sous-épineuse"],
 
-  9: ["bord supérieur", "bord cervical"],
+  9: ["bord supérieur", "bord superieur", "bord cervical"],
 
   10: ["incisure scapulaire"],
 
-  11: ["bord médial", "bord spinal"],
+  11: ["bord médial", "bord medial", "bord spinal"],
 
-  12: ["bord latéral", "bord axillaire"],
+  12: ["bord latéral", "bord lateral", "bord axillaire"],
 
-  13: ["angle supérieur"],
+  13: ["angle supérieur", "angle superieur"],
 
-  14: ["angle inférieur"],
+  14: ["angle inférieur", "angle inferieur"],
 
-  15: ["processus coracoïde"],
+  15: ["processus coracoïde", "processus coracoide"],
 
-  16: ["cavité glénoïdale", "cavité glénoïde"],
+  16: ["cavité glénoïdale", "cavite glenoidale", "cavité glénoïde", "cavite glenoide"],
 
   17: ["col de la scapula"],
 
@@ -598,7 +769,9 @@ const SCAPULA: LandmarkMap = {
 };
 
 // ======================================================
+
 // HUMÉRUS
+
 // ======================================================
 
 const HUMERUS: LandmarkMap = {
@@ -646,7 +819,9 @@ const HUMERUS: LandmarkMap = {
 };
 
 // ======================================================
+
 // RADIUS
+
 // ======================================================
 
 const RADIUS: LandmarkMap = {
@@ -676,13 +851,17 @@ const RADIUS: LandmarkMap = {
 
   13: [
     "face latérale de l'épiphyse distale",
+
     "face latérale",
+
     "processus styloïde du radius",
   ],
 
   14: [
     "face médiale de l'épiphyse distale",
+
     "face médiale",
+
     "incisure ulnaire du radius",
   ],
 
@@ -690,7 +869,9 @@ const RADIUS: LandmarkMap = {
 };
 
 // ======================================================
+
 // ULNA
+
 // ======================================================
 
 const ULNA: LandmarkMap = {
@@ -720,7 +901,9 @@ const ULNA: LandmarkMap = {
 };
 
 // ======================================================
+
 // MAIN
+
 // ======================================================
 
 const HAND: LandmarkMap = {
@@ -754,21 +937,31 @@ const HAND: LandmarkMap = {
 };
 
 // ======================================================
+
 // STERNUM
+
 // ======================================================
 
 const STERNUM: LandmarkMap = {
   1: ["manubrium sternal", "manubrium"],
+
   2: ["appendice xiphoïde", "processus xiphoïde"],
+
   3: ["corps du sternum", "corps"],
+
   4: ["angle de Louis", "angle sternal"],
+
   5: ["première échancrure costale", "1ère échancrure costale"],
+
   6: ["deuxième échancrure costale", "2ème échancrure costale"],
+
   7: ["échancrure claviculaire", "échancrures claviculaires"],
 };
 
 // ======================================================
+
 // CÔTES
+
 // ======================================================
 
 const RIBS: LandmarkMap = {
@@ -777,167 +970,207 @@ const RIBS: LandmarkMap = {
   3: ["corps de la côte", "corps"],
   4: ["bord supérieur"],
   5: ["bord inférieur"],
-  6: ["tubérosité costale", "tubercule costal"],
-  7: ["angle postérieur de la côte", "angle postérieur"],
-  8: ["angle antérieur de la côte", "angle antérieur"],
-  9: ["gouttière costale"],
-
-  10: ["tête de la première côte", "tête de la 1ère côte"],
-  11: ["col de la première côte", "col de la 1ère côte"],
-  12: ["gouttière de l'artère sous-clavière", "gouttière postérieure"],
-  13: ["gouttière de la veine sous-clavière", "gouttière antérieure"],
-  14: ["tubercule de Lisfranc", "tubercule costal"],
-
-  15: ["face supéro-latérale de la deuxième côte", "face supéro-latérale"],
-
-  16: ["tête de la onzième côte", "tête de la 11ème côte"],
-  17: ["surface articulaire de la onzième côte", "surface articulaire"],
-  18: ["face supérieure de la onzième côte", "face supérieure"],
-  19: ["face inférieure de la onzième côte", "face inférieure"],
-
-  20: ["tête de la douzième côte", "tête de la 12ème côte"],
-  21: ["surface articulaire de la douzième côte", "surface articulaire"],
-  22: ["corps de la douzième côte", "corps"],
+  6: ["tubercule costal", "tubérosité costale"],
+  7: ["angle de la côte", "angle postérieur de la côte"],
+  8: ["angle antérieur de la côte"],
+  9: ["sillon costal", "gouttière costale"],
+  10: ["tête de la première côte"],
+  11: ["col de la première côte"],
+  12: ["sillon de l'artère subclavière", "gouttière de l'artère sous-clavière"],
+  13: ["sillon de la veine subclavière", "gouttière de la veine sous-clavière"],
+  14: ["tubercule du muscle scalène antérieur", "tubercule de Lisfranc"],
+  15: ["face supéro-latérale de la deuxième côte"],
+  16: ["tête de la onzième côte"],
+  17: ["surface articulaire de la onzième côte"],
+  18: ["face supérieure de la onzième côte"],
+  19: ["face inférieure de la onzième côte"],
+  20: ["tête de la douzième côte"],
+  21: ["surface articulaire de la douzième côte"],
+  22: ["corps de la douzième côte"],
 };
 
 // ======================================================
+
 // VERTÈBRE CERVICALE TYPE
+
 // ======================================================
 
 const CERVICAL_TYPICAL: LandmarkMap = {
   1: ["corps vertébral", "corps"],
+
   2: ["pédicule", "pédicules"],
+
   3: ["processus articulaire", "processus articulaires"],
+
   4: ["surface articulaire supérieure"],
+
   5: ["surface articulaire inférieure"],
+
   6: ["lame vertébrale", "lames vertébrales"],
+
   7: ["processus épineux"],
+
   8: ["processus transverse", "processus transverses"],
+
   9: ["foramen transverse"],
+
   10: ["foramen vertébral", "trou vertébral"],
 };
 
 // ======================================================
+
 // ATLAS — C1
+
 // ======================================================
 
 const ATLAS: LandmarkMap = {
   1: ["arc antérieur"],
+
   2: ["arc postérieur"],
+
   3: ["tubercule antérieur"],
+
   4: ["tubercule postérieur"],
+
   5: ["foramen vertébral", "trou vertébral"],
+
   6: ["masse latérale", "masses latérales"],
+
   7: ["surface articulaire supérieure"],
+
   8: ["surface articulaire inférieure"],
+
   9: ["fossette du processus odontoïde", "fossette odontoïdienne"],
+
   10: ["foramen transverse"],
+
   11: ["processus transverse"],
+
   12: ["gouttière de l'artère vertébrale", "sillon de l'artère vertébrale"],
 };
 
 // ======================================================
+
 // AXIS — C2
+
 // ======================================================
 
 const AXIS: LandmarkMap = {
-  1: ["processus odontoïde", "dent de l'axis", "odontoïde"],
-  2: ["facette articulaire atloïdienne", "facette articulaire antérieure"],
-  3: ["facette articulaire postérieure"],
-  4: ["processus articulaire", "processus articulaires"],
-  5: ["surface articulaire supérieure"],
-  6: ["surface articulaire inférieure"],
-  7: ["processus transverse"],
-  8: ["foramen transverse"],
-  9: ["bec de l'axis"],
+  1: ["dent de l'axis", "processus odontoïde"],
+  2: ["surface articulaire antérieure de la dent", "facette atloïdienne"],
+  3: ["bec de l'axis"],
+  4: ["surface articulaire postérieure de la dent"],
+  5: ["processus articulaire", "processus articulaires"],
+  6: ["surface articulaire supérieure"],
+  7: ["surface articulaire inférieure"],
+  8: ["processus transverse"],
+  9: ["foramen transverse"],
   10: ["processus épineux"],
-  11: ["arc neural"],
+  11: ["arc vertébral", "arc neural"],
   12: ["foramen vertébral", "trou vertébral"],
 };
 
 // ======================================================
+
 // C7 — VERTÈBRE PROÉMINENTE
+
 // ======================================================
 
 const C7: LandmarkMap = {
   1: ["processus épineux"],
+
   2: ["processus transverse"],
 };
 
 // ======================================================
+
 // VERTÈBRE THORACIQUE
+
 // ======================================================
 
 const THORACIC: LandmarkMap = {
   1: ["corps vertébral", "corps"],
-  2: ["facettes costales", "facette costale"],
+
+  2: ["fossettes costales", "fossette costale", "facettes costales"],
+
   3: ["lames vertébrales", "lame vertébrale"],
+
   4: ["processus épineux"],
+
   5: ["pédicule vertébral", "pédicule"],
+
   6: ["processus transverse"],
+
   7: ["processus articulaire supérieur"],
+
   8: ["processus articulaire inférieur"],
+
   9: ["trou vertébral", "foramen vertébral"],
 };
 
 // ======================================================
+
 // VERTÈBRE LOMBAIRE
+
 // ======================================================
 
 const LUMBAR: LandmarkMap = {
   1: ["corps vertébral", "corps"],
-  2: ["pédicule", "pédicule vertébral"],
-  3: ["lames vertébrales", "lame vertébrale"],
+  2: ["pédicule vertébral", "pédicule"],
+  3: ["lame vertébrale", "lames vertébrales"],
   4: ["processus épineux"],
   5: ["processus articulaire supérieur"],
-  6: ["tubercule mamillaire"],
+  6: ["processus mamillaire", "tubercule mamillaire"],
   7: ["processus articulaire inférieur"],
-  8: ["processus transverse"],
-  9: ["processus costiforme"],
-  10: ["tubercule accessoire"],
-  11: ["trou vertébral", "foramen vertébral"],
+  8: ["processus transverse", "processus costiforme"],
+  9: ["processus accessoire", "tubercule accessoire"],
+  10: ["foramen vertébral", "trou vertébral"],
 };
 
 // ======================================================
+
 // SACRUM
+
 // ======================================================
 
 const SACRUM: LandmarkMap = {
   1: ["bande des corps vertébraux", "corps vertébraux"],
-  2: ["crêtes transversales", "crête transversale"],
-  3: ["trous sacrés antérieurs", "foramens sacrés antérieurs"],
-  4: ["gouttières des nerfs sacrés", "gouttière des nerfs sacrés"],
-
-  5: ["crête sacrée"],
-  6: ["cornes du sacrum"],
-  7: ["échancrure sacrée"],
-  8: ["gouttières sacrées", "gouttière sacrée"],
-  9: ["tubercules sacrés postéro-médiaux", "tubercule sacré postéro-médial"],
-  10: ["trous sacrés postérieurs", "foramens sacrés postérieurs"],
-  11: ["tubercules sacrés postéro-latéraux", "tubercule sacré postéro-latéral"],
-
+  2: ["lignes transverses", "lignes transversales"],
+  3: ["foramens sacraux antérieurs", "trous sacrés antérieurs"],
+  4: ["sillons des nerfs sacraux", "gouttières des nerfs sacrés"],
+  5: ["crête sacrale médiane"],
+  6: ["cornes sacrales", "cornes du sacrum"],
+  7: ["hiatus sacral", "échancrure sacrée"],
+  8: ["sillons sacraux", "gouttières sacrées"],
+  9: ["crêtes sacrales intermédiaires"],
+  10: ["foramens sacraux postérieurs", "trous sacrés postérieurs"],
+  11: ["crêtes sacrales latérales"],
   12: ["surface auriculaire"],
   13: ["base du sacrum", "base"],
-  14: ["orifice supérieur du canal sacré", "canal sacré"],
+  14: ["orifice supérieur du canal sacral", "canal sacral"],
   15: ["processus articulaires supérieurs", "processus articulaire supérieur"],
-  16: ["ailerons sacrés", "aileron sacré"],
-  17: ["sommet du sacrum", "apex du sacrum"],
+  16: ["ailes du sacrum", "ailerons sacrés"],
+  17: ["apex du sacrum", "sommet du sacrum"],
 };
 
 // ======================================================
+
 // COCCYX
+
 // ======================================================
 
 const COCCYX: LandmarkMap = {
   1: ["vertèbres coccygiennes", "vertèbre coccygienne"],
-  2: ["petites cornes du coccyx", "cornes du coccyx"],
+  2: ["cornes coccygiennes", "cornes du coccyx"],
   3: ["processus transverses", "processus transverse"],
   4: ["base du coccyx", "base"],
   5: ["apex du coccyx", "apex"],
 };
 
 // ======================================================
+
 // EXERCICES
+
 // ======================================================
 
 export const IDENTIFICATION_EXERCISES: Record<
@@ -946,235 +1179,293 @@ export const IDENTIFICATION_EXERCISES: Record<
 > = {
   sup: [
     // ====================================================
+
     // CLAVICULE
+
     // ====================================================
 
     {
-      id: "clavicle",
+      id: "clavicle-superior",
       title: "La clavicule",
-      subtitle: "Vues supérieure et inférieure",
-      image: require("../../assets/courses/membre-superieur/page-04.webp"),
-      landmarks: pick(
-        CLAVICLE,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-      ),
+      subtitle: "Vue supérieure",
+      image: require("../../assets/identification/clavicle/superior.jpg"),
+      landmarks: pick(CLAVICLE, [1, 8, 9, 10, 11, 12, 13, 14, 16]),
+    },
+    {
+      id: "clavicle-inferior",
+      title: "La clavicule",
+      subtitle: "Vue inférieure",
+      image: require("../../assets/identification/clavicle/inferior.jpg"),
+      landmarks: pick(CLAVICLE, [2, 3, 4, 5, 6, 7, 15, 17]),
     },
 
     // ====================================================
-    // SCAPULA
+    // SCAPULA — planches distinctes du PDF 2026
     // ====================================================
-
     {
-      id: "scapula-anterior",
+  id: "scapula-anterior",
   title: "La scapula",
   subtitle: "Vue antérieure",
-  image: require("../../assets/courses/membre-superieur/page-09.webp"),
-      landmarks: pick(SCAPULA, [1, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]),
-    },
+  image: require("../../assets/identification/membre-superieur/scapula-anterior.jpg"),
+  landmarks: pick(SCAPULA, [1, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]),
+},
 
-    {
-      id: "scapula-posterior",
-      title: "La scapula",
-      subtitle: "Vue postérieure",
-      image: require("../../assets/courses/membre-superieur/page-10.webp"),
-      landmarks: pick(SCAPULA, [2, 3, 4, 5, 6, 7, 8]),
-    },
+{
+  id: "scapula-posterior",
+  title: "La scapula",
+  subtitle: "Vue postérieure",
+  image: require("../../assets/identification/membre-superieur/scapula-posterior.jpg"),
+  landmarks: pick(SCAPULA, [2, 3, 4, 5, 6, 7, 8]),
+},
 
     // ====================================================
-    // HUMÉRUS
+    // HUMÉRUS — 2 vues découpées de la page 12
     // ====================================================
-
     {
-      id: "humerus",
+      id: "humerus-anterior",
       title: "L'humérus",
-      subtitle: "Vues antérieure et postérieure",
-      image: require("../../assets/courses/membre-superieur/page-14.webp"),
+      subtitle: "Vue antérieure",
+      image: require("../../assets/identification/membre-superieur/humerus-anterior.webp"),
       landmarks: pick(
         HUMERUS,
-        [
-          1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-          21,
-        ],
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 20, 21],
       ),
+    },
+    {
+      id: "humerus-posterior",
+      title: "L'humérus",
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/membre-superieur/humerus-posterior.webp"),
+      landmarks: pick(HUMERUS, [1, 2, 3, 4, 10, 11, 15, 17, 18, 19, 20, 21]),
     },
 
     // ====================================================
-    // RADIUS
+    // RADIUS — 2 vues découpées de la page 15
     // ====================================================
-
     {
-      id: "radius",
+      id: "radius-posterior",
       title: "Le radius",
-      subtitle: "Vues postérieure et antérieure",
-      image: require("../../assets/courses/membre-superieur/page-18.webp"),
-      landmarks: pick(
-        RADIUS,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-      ),
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/membre-superieur/radius-posterior.webp"),
+      landmarks: pick(RADIUS, [1, 2, 3, 4, 6, 7, 9, 10, 12, 13]),
     },
-
-    // ====================================================
-    // ULNA
-    // ====================================================
-
     {
-      id: "ulna",
-      title: "L'ulna",
-      subtitle: "Vues antérieure et postérieure",
-      image: require("../../assets/courses/membre-superieur/page-21.webp"),
-      landmarks: pick(ULNA, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+      id: "radius-anterior",
+      title: "Le radius",
+      subtitle: "Vue antérieure",
+      image: require("../../assets/identification/membre-superieur/radius-anterior.webp"),
+      landmarks: pick(RADIUS, [1, 2, 3, 4, 5, 8, 9, 11, 13, 14, 15]),
     },
 
     // ====================================================
-    // MAIN
+    // ULNA — 2 vues découpées de la page 18
     // ====================================================
+    {
+      id: "ulna-anterior",
+      title: "L'ulna",
+      subtitle: "Vue antérieure",
+      image: require("../../assets/identification/membre-superieur/ulna-anterior.webp"),
+      landmarks: pick(ULNA, [1, 2, 3, 4, 5, 8, 10, 11, 12]),
+    },
+    {
+      id: "ulna-posterior",
+      title: "L'ulna",
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/membre-superieur/ulna-posterior.webp"),
+      landmarks: pick(ULNA, [2, 6, 7, 9, 10, 11, 12]),
+    },
 
+    // ====================================================
+    // MAIN — déjà une image par vue dans le PDF 2026
+    // ====================================================
     {
       id: "hand-anterior",
       title: "Le squelette de la main",
       subtitle: "Vue antérieure",
-      image: require("../../assets/courses/membre-superieur/page-24.webp"),
+      image: require("../../assets/courses/membre-superieur/page-21.webp"),
       landmarks: pick(HAND, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]),
     },
-
     {
       id: "hand-dorsal",
       title: "Le squelette de la main",
       subtitle: "Vue dorsale",
-      image: require("../../assets/courses/membre-superieur/page-25.webp"),
+      image: require("../../assets/courses/membre-superieur/page-22.webp"),
       landmarks: pick(HAND, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]),
     },
   ],
 
   ax: [
-    // ====================================================
-    // STERNUM
-    // ====================================================
-
     {
-      id: "sternum",
+      id: "sternum-anterior",
       title: "Le sternum",
-      subtitle: "Repères anatomiques",
-      image: require("../../assets/courses/squelette-axial/page-04.webp"),
+      subtitle: "Vue antérieure",
+      image: require("../../assets/identification/squelette-axial/sternum-anterior.webp"),
       landmarks: pick(STERNUM, [1, 2, 3, 4, 5, 6, 7]),
     },
-
-    // ====================================================
-    // CÔTES
-    // ====================================================
-
     {
-      id: "ribs-typical",
-      title: "Les côtes",
-      subtitle: "Côte typique",
-      image: require("../../assets/courses/squelette-axial/page-07.webp"),
-      landmarks: pick(RIBS, [1, 2, 3, 4, 5, 6, 7, 8, 9]),
+      id: "sternum-lateral",
+      title: "Le sternum",
+      subtitle: "Vue latérale",
+      image: require("../../assets/identification/squelette-axial/sternum-lateral.webp"),
+      landmarks: pick(STERNUM, [4, 5, 6, 7]),
     },
-
     {
-      id: "ribs-special",
+      id: "ribs-typical-medial",
       title: "Les côtes",
-      subtitle: "Côtes particulières",
-      image: require("../../assets/courses/squelette-axial/page-08.webp"),
-      landmarks: pick(
-        RIBS,
-        [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
-      ),
+      subtitle: "Côte typique — vue médiale",
+      image: require("../../assets/identification/squelette-axial/ribs-typical-medial.webp"),
+      landmarks: pick(RIBS, [1, 2, 3, 4, 5, 8, 9]),
     },
-
-    // ====================================================
-    // RACHIS CERVICAL
-    // ====================================================
-
+    {
+      id: "ribs-typical-posterolateral",
+      title: "Les côtes",
+      subtitle: "Côte typique — vue postéro-latérale",
+      image: require("../../assets/identification/squelette-axial/ribs-typical-posterolateral.webp"),
+      landmarks: pick(RIBS, [6, 7, 8]),
+    },
+    {
+      id: "ribs-special-first-second",
+      title: "Les côtes",
+      subtitle: "Première et deuxième côtes",
+      image: require("../../assets/identification/squelette-axial/ribs-special-first-second.webp"),
+      landmarks: pick(RIBS, [10, 11, 12, 13, 14, 15]),
+    },
+    {
+      id: "ribs-special-twelfth",
+      title: "Les côtes",
+      subtitle: "Douzième côte",
+      image: require("../../assets/identification/squelette-axial/ribs-special-twelfth.webp"),
+      landmarks: pick(RIBS, [20, 21, 22]),
+    },
+    {
+      id: "ribs-special-eleventh",
+      title: "Les côtes",
+      subtitle: "Onzième côte",
+      image: require("../../assets/identification/squelette-axial/ribs-special-eleventh.webp"),
+      landmarks: pick(RIBS, [16, 17, 18, 19]),
+    },
     {
       id: "cervical-typical",
       title: "Le rachis cervical",
       subtitle: "Vertèbre cervicale type",
-      image: require("../../assets/courses/squelette-axial/page-12.webp"),
+      image: require("../../assets/identification/squelette-axial/cervical-typical.webp"),
       landmarks: pick(CERVICAL_TYPICAL, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
     },
-
     {
-      id: "cervical-atlas",
+      id: "cervical-atlas-superior",
       title: "L'Atlas — C1",
-      subtitle: "Première vertèbre cervicale",
-      image: require("../../assets/courses/squelette-axial/page-13.webp"),
-      landmarks: pick(ATLAS, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+      subtitle: "Vue supérieure",
+      image: require("../../assets/identification/squelette-axial/atlas-superior.webp"),
+      landmarks: pick(ATLAS, [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12]),
     },
-
     {
-      id: "cervical-axis",
+      id: "cervical-atlas-posterior",
+      title: "L'Atlas — C1",
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/squelette-axial/atlas-posterior.webp"),
+      landmarks: pick(ATLAS, [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12]),
+    },
+    {
+      id: "cervical-axis-lateral",
       title: "L'Axis — C2",
-      subtitle: "Deuxième vertèbre cervicale",
-      image: require("../../assets/courses/squelette-axial/page-14.webp"),
-      landmarks: pick(AXIS, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+      subtitle: "Vue latérale",
+      image: require("../../assets/identification/squelette-axial/axis-lateral.webp"),
+      landmarks: pick(AXIS, [1, 2, 3, 5, 6, 7, 8, 9, 10]),
     },
-
     {
-      id: "cervical-c7",
+      id: "cervical-axis-posterior",
+      title: "L'Axis — C2",
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/squelette-axial/axis-posterior.webp"),
+      landmarks: pick(AXIS, [1, 4, 5, 6, 7, 8, 9, 10]),
+    },
+    {
+      id: "cervical-axis-superior",
+      title: "L'Axis — C2",
+      subtitle: "Vue supérieure",
+      image: require("../../assets/identification/squelette-axial/axis-superior.webp"),
+      landmarks: pick(AXIS, [1, 2, 5, 6, 8, 9, 10, 11, 12]),
+    },
+    {
+      id: "cervical-c7-superior",
       title: "C7",
-      subtitle: "Vertèbre proéminente",
-      image: require("../../assets/courses/squelette-axial/page-15.webp"),
+      subtitle: "Vue supérieure",
+      image: require("../../assets/identification/squelette-axial/c7-superior.webp"),
       landmarks: pick(C7, [1, 2]),
     },
-
-    // ====================================================
-    // RACHIS THORACIQUE
-    // ====================================================
-
     {
-      id: "thoracic",
+      id: "cervical-c7-lateral",
+      title: "C7",
+      subtitle: "Vue latérale",
+      image: require("../../assets/identification/squelette-axial/c7-lateral.webp"),
+      landmarks: pick(C7, [1, 2]),
+    },
+    {
+      id: "thoracic-superior",
       title: "Le rachis thoracique",
-      subtitle: "Vertèbre thoracique type",
-      image: require("../../assets/courses/squelette-axial/page-18.webp"),
-      landmarks: pick(THORACIC, [1, 2, 3, 4, 5, 6, 7, 8, 9]),
+      subtitle: "Vue supérieure",
+      image: require("../../assets/identification/squelette-axial/thoracic-superior.webp"),
+      landmarks: pick(THORACIC, [1, 2, 3, 4, 5, 6, 7, 9]),
     },
-
-    // ====================================================
-    // RACHIS LOMBAIRE
-    // ====================================================
-
     {
-      id: "lumbar",
+      id: "thoracic-lateral",
+      title: "Le rachis thoracique",
+      subtitle: "Vue latérale",
+      image: require("../../assets/identification/squelette-axial/thoracic-lateral.webp"),
+      landmarks: pick(THORACIC, [1, 2, 4, 6, 7, 8]),
+    },
+    {
+      id: "lumbar-superior",
       title: "Le rachis lombaire",
-      subtitle: "Vertèbre lombaire type",
-      image: require("../../assets/courses/squelette-axial/page-21.webp"),
-      landmarks: pick(LUMBAR, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
+      subtitle: "Vue supérieure",
+      image: require("../../assets/identification/squelette-axial/lumbar-superior.webp"),
+      landmarks: pick(LUMBAR, [1, 2, 3, 4, 5, 6, 8, 9, 10]),
     },
-
-    // ====================================================
-    // SACRUM
-    // ====================================================
-
     {
-      id: "sacrum",
+      id: "lumbar-lateral",
+      title: "Le rachis lombaire",
+      subtitle: "Vue latérale",
+      image: require("../../assets/identification/squelette-axial/lumbar-lateral.webp"),
+      landmarks: pick(LUMBAR, [1, 2, 4, 5, 7, 8, 9]),
+    },
+    {
+      id: "lumbar-posterior",
+      title: "Le rachis lombaire",
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/squelette-axial/lumbar-posterior.webp"),
+      landmarks: pick(LUMBAR, [3, 4, 5, 6, 7, 8, 9, 10]),
+    },
+    {
+      id: "sacrum-anterior",
       title: "Le sacrum",
-      subtitle: "Repères anatomiques",
-      image: require("../../assets/courses/squelette-axial/page-24.webp"),
-      landmarks: pick(
-        SACRUM,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-      ),
+      subtitle: "Vue antérieure",
+      image: require("../../assets/identification/squelette-axial/sacrum-anterior.webp"),
+      landmarks: pick(SACRUM, [1, 2, 3, 4, 13, 15, 16, 17]),
     },
-
-    // ====================================================
-    // COCCYX
-    // ====================================================
-
     {
-      id: "coccyx",
+      id: "sacrum-posterior",
+      title: "Le sacrum",
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/squelette-axial/sacrum-posterior.webp"),
+      landmarks: pick(SACRUM, [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]),
+    },
+    {
+      id: "coccyx-anterior",
       title: "Le coccyx",
-      subtitle: "Repères anatomiques",
-      image: require("../../assets/courses/squelette-axial/page-26.webp"),
-      landmarks: pick(COCCYX, [1, 2, 3, 4, 5]),
+      subtitle: "Vue antérieure",
+      image: require("../../assets/identification/squelette-axial/coccyx-anterior.webp"),
+      landmarks: pick(COCCYX, [2, 3, 4, 5]),
+    },
+    {
+      id: "coccyx-posterior",
+      title: "Le coccyx",
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/squelette-axial/coccyx-posterior.webp"),
+      landmarks: pick(COCCYX, [1, 2, 3]),
     },
   ],
 
   inf: [
-    // --------------------------------------------------
-    // OS COXAL
-    // --------------------------------------------------
-
     {
       id: "coxal-medial",
       title: "L'os coxal",
@@ -1183,12 +1474,11 @@ export const IDENTIFICATION_EXERCISES: Record<
       landmarks: pick(
         COXAL,
         [
-          17, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
-          36, 37, 38, 39, 40, 41,
+          17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
+          35, 36, 37, 38, 39, 40, 41,
         ],
       ),
     },
-
     {
       id: "coxal-lateral",
       title: "L'os coxal",
@@ -1196,22 +1486,16 @@ export const IDENTIFICATION_EXERCISES: Record<
       image: require("../../assets/courses/membre-inferieur/page-07.webp"),
       landmarks: pick(
         COXAL,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
       ),
     },
-
-    // --------------------------------------------------
-    // FÉMUR
-    // --------------------------------------------------
-
     {
       id: "femur-anterior",
       title: "Le fémur",
       subtitle: "Vue antérieure",
       image: require("../../assets/courses/membre-inferieur/page-11.webp"),
-      landmarks: pick(FEMUR, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22]),
+      landmarks: pick(FEMUR, [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 22]),
     },
-
     {
       id: "femur-posterior",
       title: "Le fémur",
@@ -1222,34 +1506,30 @@ export const IDENTIFICATION_EXERCISES: Record<
         [4, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26, 27],
       ),
     },
-
-    // --------------------------------------------------
-    // PATELLA
-    // --------------------------------------------------
-
     {
-      id: "patella",
+      id: "patella-anterior",
       title: "La patella",
-      subtitle: "Vues antérieure et postérieure",
-      image: require("../../assets/courses/membre-inferieur/page-14.webp"),
-      landmarks: pick(PATELLA, [1, 2, 3, 4, 5, 6]),
+      subtitle: "Vue antérieure",
+      image: require("../../assets/identification/membre-inferieur/patella-anterior.webp"),
+      landmarks: pick(PATELLA, [1, 3, 4, 5, 6]),
     },
-
-    // --------------------------------------------------
-    // TIBIA
-    // --------------------------------------------------
-
+    {
+      id: "patella-posterior",
+      title: "La patella",
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/membre-inferieur/patella-posterior.webp"),
+      landmarks: pick(PATELLA, [2, 3, 4, 5, 6]),
+    },
     {
       id: "tibia-anterior",
       title: "Le tibia",
-      subtitle: "Vue antérieure",
+      subtitle: "Vue antérieure (tibia et fibula)",
       image: require("../../assets/courses/membre-inferieur/page-18.webp"),
       landmarks: pick(
         TIBIA,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 21, 22, 23, 24, 25],
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 21, 22, 24, 25],
       ),
     },
-
     {
       id: "tibia-posterior",
       title: "Le tibia",
@@ -1257,46 +1537,60 @@ export const IDENTIFICATION_EXERCISES: Record<
       image: require("../../assets/courses/membre-inferieur/page-19.webp"),
       landmarks: pick(
         TIBIA,
-        [1, 2, 9, 10, 13, 18, 19, 20, 21, 22, 23, 24, 25, 26],
+        [2, 4, 9, 10, 13, 18, 19, 20, 21, 22, 23, 24, 25, 26],
       ),
     },
-
-    // --------------------------------------------------
-    // FIBULA
-    // --------------------------------------------------
-
     {
-      id: "fibula",
+      id: "fibula-anterior",
       title: "La fibula",
-      subtitle: "Vues antérieure, postérieure et médiale",
-      image: require("../../assets/courses/membre-inferieur/page-22.webp"),
-      landmarks: pick(
-        FIBULA,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-      ),
+      subtitle: "Vue antérieure",
+      image: require("../../assets/identification/membre-inferieur/fibula-anterior.webp"),
+      landmarks: pick(FIBULA, [1, 2, 3, 4, 6, 10, 12, 13, 15]),
     },
-
-    // --------------------------------------------------
-    // PIED
-    // --------------------------------------------------
-
     {
-      id: "foot-anterior-plantar",
+      id: "fibula-posterior",
+      title: "La fibula",
+      subtitle: "Vue postérieure",
+      image: require("../../assets/identification/membre-inferieur/fibula-posterior.webp"),
+      landmarks: pick(FIBULA, [3, 4, 6, 8, 11]),
+    },
+    {
+      id: "fibula-medial",
+      title: "La fibula",
+      subtitle: "Vue médiale",
+      image: require("../../assets/identification/membre-inferieur/fibula-medial.webp"),
+      landmarks: pick(FIBULA, [2, 3, 4, 5, 7, 9, 10, 11, 14, 15]),
+    },
+    {
+      id: "foot-dorsal",
       title: "Le squelette du pied",
-      subtitle: "Vues antérieure et plantaire",
-      image: require("../../assets/courses/membre-inferieur/page-25.webp"),
+      subtitle: "Vue dorsale (supérieure)",
+      image: require("../../assets/identification/membre-inferieur/foot-dorsal.webp"),
       landmarks: pick(
         FOOT,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19],
       ),
     },
-
     {
-      id: "foot-lateral-medial",
+      id: "foot-plantar",
       title: "Le squelette du pied",
-      subtitle: "Vues latérale et médiale",
-      image: require("../../assets/courses/membre-inferieur/page-26.webp"),
-      landmarks: pick(FOOT, [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 18, 19]),
+      subtitle: "Vue plantaire (inférieure)",
+      image: require("../../assets/identification/membre-inferieur/foot-plantar.webp"),
+      landmarks: pick(FOOT, [12, 13, 20]),
+    },
+    {
+      id: "foot-lateral",
+      title: "Le squelette du pied",
+      subtitle: "Vue latérale",
+      image: require("../../assets/identification/membre-inferieur/foot-lateral.webp"),
+      landmarks: pick(FOOT, [5, 6, 7, 8, 9, 11, 13, 14]),
+    },
+    {
+      id: "foot-medial",
+      title: "Le squelette du pied",
+      subtitle: "Vue médiale",
+      image: require("../../assets/identification/membre-inferieur/foot-medial.webp"),
+      landmarks: pick(FOOT, [5, 6, 7, 8, 9, 10, 11, 12, 15, 18, 19]),
     },
   ],
 };

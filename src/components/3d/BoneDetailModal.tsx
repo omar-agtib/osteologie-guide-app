@@ -199,6 +199,11 @@ export default function BoneDetailModal({
 
   const formattedName = formatBoneName(boneName);
 
+  const boneSide: "left" | "right" =
+  /(?:^|[_\s.-])(L|LEFT|GAUCHE)(?:$|[_\s.-])/i.test(boneName)
+    ? "left"
+    : "right";
+
   const detailModel = getDetailModel(formattedName);
 
   const info: BoneInfo | undefined = boneData[formattedName];
@@ -247,17 +252,22 @@ export default function BoneDetailModal({
 
             <View style={styles.viewer}>
               {detailModel ? (
-                <AnatomicalDetailViewer
-                  modelAsset={detailModel.asset}
-                  initialRotation={detailModel.initialRotation}
-                  longitudinalAxis={detailModel.longitudinalAxis}
-                  views={detailModel.views}
-                  features={detailModel.features}
-                  onLandmarkPress={(landmark) => {
-                    setSelectedLandmark(landmark);
-                  }}
-                  onInteractionChange={setViewerInteracting}
-                />
+                
+<AnatomicalDetailViewer
+  key={`${formattedName}-${boneSide}`}
+  modelAsset={detailModel.asset}
+  boneName={formattedName}
+  initialSide={boneSide}
+  initialRotation={detailModel.initialRotation}
+  longitudinalAxis={detailModel.longitudinalAxis}
+  views={detailModel.views}
+  features={detailModel.features}
+  onLandmarkPress={(landmark) => {
+    setSelectedLandmark(landmark);
+  }}
+  onInteractionChange={setViewerInteracting}
+/>
+
               ) : (
                 <>
                   <View pointerEvents="none" style={StyleSheet.absoluteFill}>

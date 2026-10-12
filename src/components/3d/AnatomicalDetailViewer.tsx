@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three-stdlib";
 
 import * as FileSystem from "expo-file-system/legacy";
+import { LinearGradient } from "expo-linear-gradient";
 import type {
   DetailModelAxis,
   DetailModelFeatures,
@@ -13,7 +14,6 @@ import type {
 } from "../../data/detailModels";
 import { useSkeletonGestures } from "../../hooks/useSkeletonGestures";
 import { SkeletonLoader } from "../ui/SkeletonLoader";
-import { LinearGradient } from "expo-linear-gradient";
 /* ============================================================
    TYPES
    ============================================================ */
@@ -38,6 +38,8 @@ export type AnatomicalLandmark = {
 
 type Props = {
   modelAsset: number;
+  boneName?: string;
+  initialSide?: "left" | "right";
 
   initialRotation?: {
     x: number;
@@ -63,13 +65,11 @@ type OrientationLabels = {
   right: string;
 };
 
-
-
 /* ============================================================
    3D SCENE
    ============================================================ */
 
-   function CameraFollowingLight() {
+function CameraFollowingLight() {
   const lightRef = useRef<THREE.DirectionalLight>(null);
   const { camera } = useThree();
 
@@ -81,13 +81,7 @@ type OrientationLabels = {
     lightRef.current.target.updateMatrixWorld();
   });
 
-  return (
-    <directionalLight
-      ref={lightRef}
-      intensity={1.8}
-      color="#FFFFFF"
-    />
-  );
+  return <directionalLight ref={lightRef} intensity={1.8} color="#FFFFFF" />;
 }
 
 function AnatomicalScene({
@@ -226,6 +220,8 @@ function AnatomicalScene({
       description: string;
 
       zone_t?: [number, number];
+      zone_bit?: number;
+      camera?: [number, number, number];
 
       normal: THREE.Vector3 | null;
 
@@ -249,37 +245,34 @@ function AnatomicalScene({
           : null;
 
       result.push({
-  numero: data.numero,
+        numero: data.numero,
 
-  id: data.id ?? `repere_${data.numero}`,
+        id: data.id ?? `repere_${data.numero}`,
 
-  nom: data.nom ?? `Repère ${data.numero}`,
+        nom: data.nom ?? `Repère ${data.numero}`,
 
-  description: data.description ?? "",
+        description: data.description ?? "",
 
-  zone_t:
-    Array.isArray(data.zone_t) && data.zone_t.length >= 2
-      ? [Number(data.zone_t[0]), Number(data.zone_t[1])]
-      : undefined,
+        zone_t:
+          Array.isArray(data.zone_t) && data.zone_t.length >= 2
+            ? [Number(data.zone_t[0]), Number(data.zone_t[1])]
+            : undefined,
 
-  zone_bit:
-    typeof data.zone_bit === "number"
-      ? data.zone_bit
-      : undefined,
+        zone_bit: typeof data.zone_bit === "number" ? data.zone_bit : undefined,
 
-  camera:
-    Array.isArray(data.camera) && data.camera.length >= 3
-      ? [
-          Number(data.camera[0]),
-          Number(data.camera[1]),
-          Number(data.camera[2]),
-        ]
-      : undefined,
+        camera:
+          Array.isArray(data.camera) && data.camera.length >= 3
+            ? [
+                Number(data.camera[0]),
+                Number(data.camera[1]),
+                Number(data.camera[2]),
+              ]
+            : undefined,
 
-  normal,
+        normal,
 
-  object,
-});
+        object,
+      });
     });
 
     result.sort((a, b) => a.numero - b.numero);
@@ -304,8 +297,7 @@ function AnatomicalScene({
 
   const selectedZone = selectedLandmark?.zone_t ?? null;
 
-const selectedZoneBit =
-  selectedLandmark?.zone_bit ?? null;
+  const selectedZoneBit = selectedLandmark?.zone_bit ?? null;
 
   // ======================================================
   // LONGITUDINAL RANGE OF THE DETAILED MODEL
@@ -367,140 +359,105 @@ const selectedZoneBit =
   // ======================================================
 
   useEffect(() => {
-  const highlightColor = new THREE.Color("#F2C94C");
+    const highlightColor = new THREE.Color("#F2C94C");
 
-  scene.traverse((object: any) => {
-    if (!object.isMesh) {
-      return;
-    }
+    scene.traverse((object: any) => {
+      if (!object.isMesh) {
+        return;
+      }
 
-    const geometry = object.geometry as THREE.BufferGeometry;
+      const geometry = object.geometry as THREE.BufferGeometry;
 
-    const position = geometry.getAttribute("position");
-    const color = geometry.getAttribute("color");
+      const position = geometry.getAttribute("position");
+      const color = geometry.getAttribute("color");
 
-    const zones =
-      geometry.getAttribute("_zones") ??
-      geometry.getAttribute("_ZONES");
+      const zones =
+        geometry.getAttribute("_zones") ?? geometry.getAttribute("_ZONES");
 
-    const originalColors =
-      object.userData.originalVertexColors as
+      const originalColors = object.userData.originalVertexColors as
         | Float32Array
         | undefined;
 
-    if (!position || !color || !originalColors) {
-      return;
-    }
+      if (!position || !color || !originalColors) {
+        return;
+      }
 
-    // Restaurer les couleurs originales
-    for (let i = 0; i < color.count; i++) {
-      color.setXYZ(
-        i,
-        originalColors[i * 3],
-        originalColors[i * 3 + 1],
-        originalColors[i * 3 + 2],
-      );
-    }
-
-    /*
-     * ==============================================
-     * SYSTEME 1 : zone_bit + _ZONES
-     * Scapula, etc.
-     * ==============================================
-     */
-
-    if (
-      selectedZoneBit !== null &&
-      zones
-    ) {
-      const mask = 1 << selectedZoneBit;
-
-      for (let i = 0; i < position.count; i++) {
-        const vertexZones = zones.getX(i);
-
-        if ((vertexZones & mask) === 0) {
-          continue;
-        }
-
-        const originalColor = new THREE.Color(
+      // Restaurer les couleurs originales
+      for (let i = 0; i < color.count; i++) {
+        color.setXYZ(
+          i,
           originalColors[i * 3],
           originalColors[i * 3 + 1],
           originalColors[i * 3 + 2],
         );
+      }
 
-        originalColor.lerp(highlightColor, 0.72);
+      /*
+       * ==============================================
+       * SYSTEME 1 : zone_bit + _ZONES
+       * Scapula, etc.
+       * ==============================================
+       */
 
-        color.setXYZ(
-          i,
-          originalColor.r,
-          originalColor.g,
-          originalColor.b,
-        );
+      if (selectedZoneBit !== null && zones) {
+        const mask = 1 << selectedZoneBit;
+
+        for (let i = 0; i < position.count; i++) {
+          const vertexZones = zones.getX(i);
+
+          if ((vertexZones & mask) === 0) {
+            continue;
+          }
+
+          const originalColor = new THREE.Color(
+            originalColors[i * 3],
+            originalColors[i * 3 + 1],
+            originalColors[i * 3 + 2],
+          );
+
+          originalColor.lerp(highlightColor, 0.72);
+
+          color.setXYZ(i, originalColor.r, originalColor.g, originalColor.b);
+        }
+
+        color.needsUpdate = true;
+
+        return;
+      }
+
+      /*
+       * ==============================================
+       * SYSTEME 2 : zone_t
+       * Clavicule
+       * ==============================================
+       */
+
+      if (selectedZone && longitudinalRange && longitudinalRange.length > 0) {
+        for (let i = 0; i < position.count; i++) {
+          const axisValue = getAxisValue(position as THREE.BufferAttribute, i);
+
+          const t =
+            (axisValue - longitudinalRange.min) / longitudinalRange.length;
+
+          if (t < selectedZone[0] || t > selectedZone[1]) {
+            continue;
+          }
+
+          const originalColor = new THREE.Color(
+            originalColors[i * 3],
+            originalColors[i * 3 + 1],
+            originalColors[i * 3 + 2],
+          );
+
+          originalColor.lerp(highlightColor, 0.72);
+
+          color.setXYZ(i, originalColor.r, originalColor.g, originalColor.b);
+        }
       }
 
       color.needsUpdate = true;
-
-      return;
-    }
-
-    /*
-     * ==============================================
-     * SYSTEME 2 : zone_t
-     * Clavicule
-     * ==============================================
-     */
-
-    if (
-      selectedZone &&
-      longitudinalRange &&
-      longitudinalRange.length > 0
-    ) {
-      for (let i = 0; i < position.count; i++) {
-        const axisValue = getAxisValue(
-          position as THREE.BufferAttribute,
-          i,
-        );
-
-        const t =
-          (axisValue - longitudinalRange.min) /
-          longitudinalRange.length;
-
-        if (
-          t < selectedZone[0] ||
-          t > selectedZone[1]
-        ) {
-          continue;
-        }
-
-        const originalColor = new THREE.Color(
-          originalColors[i * 3],
-          originalColors[i * 3 + 1],
-          originalColors[i * 3 + 2],
-        );
-
-        originalColor.lerp(
-          highlightColor,
-          0.72,
-        );
-
-        color.setXYZ(
-          i,
-          originalColor.r,
-          originalColor.g,
-          originalColor.b,
-        );
-      }
-    }
-
-    color.needsUpdate = true;
-  });
-}, [
-  scene,
-  selectedZone,
-  selectedZoneBit,
-  longitudinalRange,
-  getAxisValue,
-]);
+    });
+  }, [scene, selectedZone, selectedZoneBit, longitudinalRange, getAxisValue]);
 
   /* ----------------------------------------------------------
      CENTER + NORMALIZE MODEL
@@ -544,7 +501,6 @@ const selectedZoneBit =
   const normalMatrix = useMemo(() => new THREE.Matrix3(), []);
 
   const projectedPosition = useMemo(() => new THREE.Vector3(), []);
-
 
   const inverseModelMatrix = useMemo(() => new THREE.Matrix4(), []);
 
@@ -675,7 +631,7 @@ const selectedZoneBit =
     localLeft.copy(localRight).multiplyScalar(-1);
 
     localBottom.copy(localTop).multiplyScalar(-1);
-   
+
     /*
      * Don't update React labels
      * on every single frame.
@@ -784,6 +740,8 @@ const selectedZoneBit =
 
 export default function AnatomicalDetailViewer({
   modelAsset,
+  boneName = "Os",
+  initialSide = "right",
   initialRotation = {
     x: 0,
     y: 0,
@@ -814,7 +772,7 @@ export default function AnatomicalDetailViewer({
 
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
 
-  const [mirrored, setMirrored] = useState(false);
+  const [mirrored, setMirrored] = useState(initialSide === "left");
 
   const [orientationLabels, setOrientationLabels] = useState<OrientationLabels>(
     {
@@ -1029,9 +987,9 @@ export default function AnatomicalDetailViewer({
 
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <LinearGradient
-  colors={["#DCE2E4", "#C9D1D4"]}
-  style={StyleSheet.absoluteFill}
-/>
+          colors={["#DCE2E4", "#C9D1D4"]}
+          style={StyleSheet.absoluteFill}
+        />
         <Canvas
           camera={{
             position: [0, 0, 4],
@@ -1042,23 +1000,19 @@ export default function AnatomicalDetailViewer({
 
             far: 100,
           }}
-         gl={{
-  antialias: false,
-  alpha: true,
-}}
-        onCreated={({ gl }) => {
-  gl.setClearColor(0x000000, 0);
+          gl={{
+            antialias: false,
+            alpha: true,
+          }}
+          onCreated={({ gl }) => {
+            gl.setClearColor(0x000000, 0);
 
-  gl.outputColorSpace = THREE.SRGBColorSpace;
+            gl.outputColorSpace = THREE.SRGBColorSpace;
 
-  gl.toneMapping = THREE.NoToneMapping;
-}}
+            gl.toneMapping = THREE.NoToneMapping;
+          }}
         >
-         <hemisphereLight
-  args={["#FFFFFF", "#AAB2B6", 1.7]}
-/>
-
-
+          <hemisphereLight args={["#FFFFFF", "#AAB2B6", 1.7]} />
 
           {loadedScene && (
             <AnatomicalScene
@@ -1173,80 +1127,68 @@ export default function AnatomicalDetailViewer({
       </View>
 
       <View style={styles.controlsContainer} pointerEvents="box-none">
-  {/* TOP ROW: MIRROR + RESET */}
+        {/* TOP ROW: MIRROR + RESET */}
 
-  <View style={styles.secondaryActions}>
-    <Pressable
-      style={[
-        styles.mirrorButton,
-        mirrored && styles.mirrorButtonActive,
-      ]}
-      onPress={() => {
-        setMirrored((prev) => !prev);
-      }}
-    >
-      <Text
-        style={[
-          styles.mirrorButtonText,
-          mirrored && styles.mirrorButtonTextActive,
-        ]}
-      >
-        {mirrored
-          ? "Clavicule droite"
-          : "Clavicule gauche (miroir)"}
-      </Text>
-    </Pressable>
+        <View style={styles.secondaryActions}>
+          <Pressable
+            style={styles.mirrorButton}
+            onPress={() => {
+              setMirrored((previous) => !previous);
+              setSelectedNumber(null);
+            }}
+          >
+            <Text style={styles.mirrorButtonText}>
+              {`${
+                boneName === "Clavicle" ? "Clavicule" : boneName
+              } ${mirrored ? "droite" : "gauche"} (miroir)`}
+            </Text>
+          </Pressable>
 
-    <Pressable
-      style={styles.resetButton}
-      onPress={() => {
-        rotationRef.current.setFromEuler(
-          new THREE.Euler(
-            initialRotation.x,
-            initialRotation.y,
-            0,
-            "XYZ",
-          ),
-        );
+          <Pressable
+            style={styles.resetButton}
+            onPress={() => {
+              rotationRef.current.setFromEuler(
+                new THREE.Euler(initialRotation.x, initialRotation.y, 0, "XYZ"),
+              );
 
-        zoomRef.current = DEFAULT_ZOOM;
+              zoomRef.current = DEFAULT_ZOOM;
 
-        setSelectedNumber(null);
+              setSelectedNumber(null);
 
-        requestedViewRef.current = {
-          id: "__reset__",
-          label: "",
-          cameraDirection: [0, 0, 1],
-          cameraUp: [0, 1, 0],
-        };
-      }}
-    >
-      <Text style={styles.resetText}>
-        Réinitialiser
-      </Text>
-    </Pressable>
-  </View>
+              requestedViewRef.current = {
+                id: "__reset__",
+                label: "",
+                cameraDirection: [0, 0, 1],
+                cameraUp: [0, 1, 0],
+              };
+            }}
+          >
+            <Text style={styles.resetText}>Réinitialiser</Text>
+          </Pressable>
+        </View>
 
-  {/* BELOW: 6 ANATOMICAL VIEWS */}
+        {/* BELOW: 6 ANATOMICAL VIEWS */}
 
-  {features.standardViews && views.length > 0 && (
-    <View style={styles.viewsGrid}>
-      {views.map((view) => (
-        <Pressable
-          key={view.id}
-          style={styles.viewButton}
-          onPress={() => {
-            requestedViewRef.current = view;
-          }}
-        >
-          <Text style={styles.viewButtonText}>
-            {view.label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  )}
-</View>
+        {features.standardViews && views.length > 0 && (
+          <View style={styles.viewsGrid}>
+            {views.map((view) => (
+              <Pressable
+                key={view.id}
+                style={styles.viewButton}
+                onPress={() => {
+                  // Retirer la sélection et restaurer les couleurs
+                  setSelectedNumber(null);
+
+                  // Modifier uniquement la vue anatomique
+                  requestedViewRef.current = view;
+                }}
+              >
+                <Text style={styles.viewButtonText}>{view.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
 
       {/* ========================================
           LOADING
@@ -1265,8 +1207,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
 
-      backgroundColor: "#DCE2E4",
-
+    backgroundColor: "#DCE2E4",
   },
 
   marker: {
@@ -1315,26 +1256,26 @@ const styles = StyleSheet.create({
     color: "#27323A",
   },
 
- resetButton: {
-  minHeight: 38,
+  resetButton: {
+    minHeight: 38,
 
-  paddingHorizontal: 18,
-  paddingVertical: 9,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
 
-  alignItems: "center",
-  justifyContent: "center",
+    alignItems: "center",
+    justifyContent: "center",
 
-  borderRadius: 12,
+    borderRadius: 12,
 
-  backgroundColor: "#27323A",
-},
+    backgroundColor: "#27323A",
+  },
 
   resetText: {
-  color: "#FFFFFF",
+    color: "#FFFFFF",
 
-  fontSize: 11,
-  fontWeight: "700",
-},
+    fontSize: 11,
+    fontWeight: "700",
+  },
 
   viewButton: {
     width: "31.5%",
@@ -1391,36 +1332,22 @@ const styles = StyleSheet.create({
 
   mirrorButton: {
     flex: 1,
-
     minHeight: 38,
-
     paddingHorizontal: 12,
     paddingVertical: 9,
-
     alignItems: "center",
     justifyContent: "center",
-
     borderRadius: 12,
-
-    backgroundColor: "#FFFFFF",
-
-    borderWidth: 1,
-    borderColor: "#D8DEE2",
-  },
-
-  mirrorButtonActive: {
     backgroundColor: "#27323A",
+    borderWidth: 1,
     borderColor: "#27323A",
   },
 
   mirrorButtonText: {
-    color: "#27323A",
+    color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "700",
-  },
-
-  mirrorButtonTextActive: {
-    color: "#FFFFFF",
+    textAlign: "center",
   },
   orientationLabel: {
     position: "absolute",
@@ -1436,9 +1363,9 @@ const styles = StyleSheet.create({
   },
 
   orientationBottom: {
-  bottom: 178,
-  alignSelf: "center",
-},
+    bottom: 178,
+    alignSelf: "center",
+  },
 
   orientationLeft: {
     left: 10,

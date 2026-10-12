@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
 
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radii.card,
+    borderRadius: radii.stageCard,
 
     gap: 12,
   },

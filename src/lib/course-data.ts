@@ -35,10 +35,6 @@ export const COURSE_DOCUMENTS: Partial<Record<ZoneKey, CourseDocument>> = {
       require("../../assets/courses/membre-superieur/page-22.webp"),
       require("../../assets/courses/membre-superieur/page-23.webp"),
       require("../../assets/courses/membre-superieur/page-24.webp"),
-      require("../../assets/courses/membre-superieur/page-25.webp"),
-      require("../../assets/courses/membre-superieur/page-26.webp"),
-      require("../../assets/courses/membre-superieur/page-27.webp"),
-      require("../../assets/courses/membre-superieur/page-28.webp"),
     ],
   },
 
