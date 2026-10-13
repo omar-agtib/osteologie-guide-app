@@ -69,6 +69,7 @@ const AXIAL_BONES = new Set([
   "neck_discs_001",
   "ribcage_001",
   "ribs_connection",
+  "spleen_001", // Sternum geometry with incorrect GLB mesh name
 ]);
 
 const BONE_MESH_NAMES: Record<string, string[]> = {
@@ -78,19 +79,15 @@ const BONE_MESH_NAMES: Record<string, string[]> = {
   ],
   scapula: ["human_scapula_bone_003", "human_scapula_bone_004"],
   humerus: ["human_humerus_01_001", "human_humerus_01_002"],
-  "radius-ulna": [
-    "human_radial_bone_001",
-    "human_radial_bone_002",
-    "human_ulna_bone_01_001",
-    "human_ulna_bone_01_002",
-  ],
+  radius: ["human_radial_bone_001", "human_radial_bone_002"],
+  ulna: ["human_ulna_bone_01_001", "human_ulna_bone_01_002"],
   carpe: [
     "human_hand_bones_anatomy_01_low001",
     "human_hand_bones_anatomy_01_low002",
   ],
   crane: ["human_skull", "human_jaw", "upper_teeth", "lower_teeth"],
   rachis: ["spinal_bones", "spinal_disks", "neck_discs_001"],
-  thorax: ["ribcage_001", "ribs_connection"],
+  thorax: ["ribcage_001", "ribs_connection", "spleen_001"],
   bassin: ["pelvis_male_01_001", "pelvis_male_02_001", "pubic_cone"],
   femur: ["human_femur_01_001", "human_femur_01_002"],
   "tibia-fibula": [
@@ -109,22 +106,26 @@ function isSelectedBone(meshName: string, selectedBoneId?: string): boolean {
   return names?.includes(meshName.toLowerCase()) ?? false;
 }
 
-
 function getBoneZone(object: THREE.Object3D): ZoneKey | null {
-  const meshName = (object.name || "").toLowerCase();
+  let current: THREE.Object3D | null = object;
 
-  if (UPPER_BONES.has(meshName)) return "sup";
-  if (LOWER_BONES.has(meshName)) return "inf";
-  if (AXIAL_BONES.has(meshName)) return "ax";
+  while (current) {
+    const name = current.name.toLowerCase();
 
-  // Sternum and its anatomical parts.
-  if (
-    meshName.includes("sternum") ||
-    meshName.includes("manubrium") ||
-    meshName.includes("xiphoid") ||
-    meshName.includes("xiphoide")
-  ) {
-    return "ax";
+    if (
+      name.includes("sternum") ||
+      name.includes("manubrium") ||
+      name.includes("xiphoid") ||
+      name.includes("xiphoide")
+    ) {
+      return "ax";
+    }
+
+    if (UPPER_BONES.has(name)) return "sup";
+    if (LOWER_BONES.has(name)) return "inf";
+    if (AXIAL_BONES.has(name)) return "ax";
+
+    current = current.parent;
   }
 
   return null;
@@ -148,6 +149,21 @@ function RealSkeleton({
 
   const model = useMemo(() => {
     const clone = scene.clone(true);
+
+    console.log("========== ALL SKELETON MESHES ==========");
+
+    const meshNames: string[] = [];
+
+    clone.traverse((object) => {
+      if ((object as THREE.Mesh).isMesh) {
+        meshNames.push(object.name || "(unnamed)");
+      }
+    });
+
+    console.log("TOTAL MESHES:", meshNames.length);
+    console.log(JSON.stringify(meshNames, null, 2));
+
+    console.log("========================================");
 
     clone.traverse((object) => {
       if (!(object as THREE.Mesh).isMesh) return;
@@ -175,19 +191,17 @@ function RealSkeleton({
     const maxDimension = Math.max(size.x, size.y, size.z);
     const SKELETON_SIZE = 3.5;
 
-const scale =
-  maxDimension > 0 ? SKELETON_SIZE / maxDimension : 1;
+    const scale = maxDimension > 0 ? SKELETON_SIZE / maxDimension : 1;
 
     wrapper.scale.setScalar(scale);
 
     // Center model
-    
-wrapper.position.set(
-  -center.x * scale,
-  -center.y * scale + 0.05,
-  -center.z * scale,
-);
 
+    wrapper.position.set(
+      -center.x * scale,
+      -center.y * scale + 0.05,
+      -center.z * scale,
+    );
 
     return wrapper;
   }, [scene]);
@@ -207,7 +221,12 @@ wrapper.position.set(
 
       // Sans os sélectionné : coloration de la zone entière.
       // Avec sélection : coloration uniquement des os concernés.
-      const shouldHighlight = hasSelection ? isSelected : zone === activeZone;
+      const shouldHighlight =
+        activeZone === "ax"
+          ? zone === "ax"
+          : hasSelection
+            ? isSelected
+            : zone === activeZone;
 
       material.color.set(shouldHighlight ? accentColor : DEFAULT_COLOR);
 

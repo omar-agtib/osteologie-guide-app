@@ -52,13 +52,21 @@ export const ZONE_DETAILS: Record<ZoneKey, ZoneDetail> = {
         chip: { x: 82, y: 44 },
       },
       {
-        id: "radius-ulna",
-        name: "Radius / Ulna",
-        description:
-          "Les deux os de l'avant-bras ; le radius pivote autour de l'ulna lors de la pronation.",
-        anchor: { x: 55, y: 68 },
-        chip: { x: 80, y: 70 },
-      },
+  id: "radius",
+  name: "Radius",
+  description:
+    "Os long latéral de l'avant-bras, situé du côté du pouce. Il participe aux articulations du coude et du poignet et intervient dans les mouvements de pronation et de supination.",
+  anchor: { x: 55, y: 65 },
+  chip: { x: 80, y: 62 },
+},
+{
+  id: "ulna",
+  name: "Ulna",
+  description:
+    "Os long médial de l'avant-bras, situé du côté du petit doigt. Il forme une partie importante de l'articulation du coude et s'articule avec le radius.",
+  anchor: { x: 55, y: 72 },
+  chip: { x: 80, y: 78 },
+},
       {
         id: "carpe",
         name: "squelette de la main",
