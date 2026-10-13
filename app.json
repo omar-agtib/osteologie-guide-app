@@ -2,6 +2,7 @@
   "expo": {
     "name": "osteologie-guide",
     "slug": "osteologie-guide",
+    "owner": "venom_n",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -47,7 +48,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "602a1c40-2048-4565-b3de-72fc4cb8093f"
+        "projectId": "0eb0a652-0549-4dde-a118-068f05e9436e"
       }
     }
   }

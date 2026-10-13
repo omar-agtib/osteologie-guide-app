@@ -1,19 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
-import {
-  Bone,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react-native";
+import { Bone, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { ZoneKey } from "../../../../../components/3d/SkeletonViewer";
 import { AnatomicalIdentification } from "../../../../../components/learning/AnatomicalIdentification";
 import {
@@ -23,6 +12,7 @@ import {
   typography,
 } from "../../../../../constants/theme";
 import { ZONE_DETAILS } from "../../../../../lib/bones-data";
+import { IDENTIFICATION_EXERCISES } from "../../../../../lib/identification-data";
 
 type BoneOption = {
   id: string;
@@ -30,41 +20,39 @@ type BoneOption = {
   subtitle: string;
 };
 
-const IDENTIFICATION_BONES: Partial<
-  Record<ZoneKey, BoneOption[]>
-    > = {
-    sup: [
-  {
-    id: "clavicle",
-    title: "Clavicule",
-    subtitle: "1 planche d'identification",
-  },
-  {
-    id: "scapula",
-    title: "Scapula",
-    subtitle: "2 planches d'identification",
-  },
-  {
-    id: "humerus",
-    title: "Humérus",
-    subtitle: "1 planche d'identification",
-  },
-  {
-    id: "radius",
-    title: "Radius",
-    subtitle: "1 planche d'identification",
-  },
-  {
-    id: "ulna",
-    title: "Ulna (Cubitus)",
-    subtitle: "1 planche d'identification",
-  },
-  {
-    id: "hand",
-    title: "Squelette de la main",
-    subtitle: "2 planches d'identification",
-  },
-],
+const IDENTIFICATION_BONES: Partial<Record<ZoneKey, BoneOption[]>> = {
+  sup: [
+    {
+      id: "clavicle",
+      title: "Clavicule",
+      subtitle: "2 planches d'identification",
+    },
+    {
+      id: "scapula",
+      title: "Scapula",
+      subtitle: "2 planches d'identification",
+    },
+    {
+      id: "humerus",
+      title: "Humérus",
+      subtitle: "1 planche d'identification",
+    },
+    {
+      id: "radius",
+      title: "Radius",
+      subtitle: "1 planche d'identification",
+    },
+    {
+      id: "ulna",
+      title: "Ulna (Cubitus)",
+      subtitle: "1 planche d'identification",
+    },
+    {
+      id: "hand",
+      title: "Squelette de la main",
+      subtitle: "2 planches d'identification",
+    },
+  ],
   ax: [
     {
       id: "sternum",
@@ -140,16 +128,13 @@ const IDENTIFICATION_BONES: Partial<
 export default function IdentificationScreen() {
   const insets = useSafeAreaInsets();
 
-  const { zoneKey } =
-    useLocalSearchParams<{ zoneKey: string }>();
+  const { zoneKey } = useLocalSearchParams<{ zoneKey: string }>();
 
   const zone = (zoneKey as ZoneKey) ?? "sup";
 
-  const detail =
-    ZONE_DETAILS[zone] ?? ZONE_DETAILS.sup;
+  const detail = ZONE_DETAILS[zone] ?? ZONE_DETAILS.sup;
 
-  const [selectedBone, setSelectedBone] =
-    useState<string | null>(null);
+  const [selectedBone, setSelectedBone] = useState<string | null>(null);
 
   const bones = IDENTIFICATION_BONES[zone] ?? [];
 
@@ -177,26 +162,14 @@ export default function IdentificationScreen() {
       {/* HEADER */}
 
       <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={handleBack}
-          hitSlop={8}
-        >
-          <ChevronLeft
-            size={20}
-            color={colors.ink}
-            strokeWidth={2.2}
-          />
+        <Pressable style={styles.backButton} onPress={handleBack} hitSlop={8}>
+          <ChevronLeft size={20} color={colors.ink} strokeWidth={2.2} />
         </Pressable>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>
-            {detail.eyebrow}
-          </Text>
+          <Text style={styles.eyebrow}>{detail.eyebrow}</Text>
 
-          <Text style={typography.headerTitle}>
-            Identification anatomique
-          </Text>
+          <Text style={typography.headerTitle}>Identification anatomique</Text>
         </View>
       </View>
 
@@ -205,10 +178,7 @@ export default function IdentificationScreen() {
       {/* =============================== */}
 
       {selectedBone ? (
-        <AnatomicalIdentification
-          zone={zone}
-          boneId={selectedBone}
-        />
+        <AnatomicalIdentification zone={zone} boneId={selectedBone} />
       ) : (
         /* =============================== */
         /* CHOIX DE L'OS */
@@ -219,14 +189,11 @@ export default function IdentificationScreen() {
           contentContainerStyle={styles.content}
         >
           <View style={styles.intro}>
-            <Text style={styles.introTitle}>
-              Choisissez un os
-            </Text>
+            <Text style={styles.introTitle}>Choisissez un os</Text>
 
             <Text style={styles.introText}>
-              Sélectionnez l'os que vous souhaitez
-              réviser puis identifiez les repères
-              anatomiques indiqués sur les planches.
+              Sélectionnez l'os que vous souhaitez réviser puis identifiez les
+              repères anatomiques indiqués sur les planches.
             </Text>
           </View>
 
@@ -238,33 +205,35 @@ export default function IdentificationScreen() {
                   styles.boneCard,
                   pressed && styles.boneCardPressed,
                 ]}
-                onPress={() =>
-                  setSelectedBone(bone.id)
-                }
+                onPress={() => setSelectedBone(bone.id)}
               >
                 <View style={styles.iconContainer}>
-                  <Bone
-                    size={22}
-                    color={colors.ink}
-                    strokeWidth={1.9}
-                  />
+                  <Bone size={22} color={colors.ink} strokeWidth={1.9} />
                 </View>
 
                 <View style={styles.boneInfo}>
-                  <Text style={styles.boneTitle}>
-                    {bone.title}
-                  </Text>
+                  <Text style={styles.boneTitle}>{bone.title}</Text>
 
                   <Text style={styles.boneSubtitle}>
-                    {bone.subtitle}
+                    {(() => {
+                      const count = (
+                        IDENTIFICATION_EXERCISES[zone] ?? []
+                      ).filter(
+                        (exercise) =>
+                          exercise.id === bone.id ||
+                          exercise.id.startsWith(`${bone.id}-`),
+                      ).length;
+
+                      return `${count} ${
+                        count === 1
+                          ? "planche d'identification"
+                          : "planches d'identification"
+                      }`;
+                    })()}
                   </Text>
                 </View>
 
-                <ChevronRight
-                  size={20}
-                  color={colors.muted}
-                  strokeWidth={2}
-                />
+                <ChevronRight size={20} color={colors.muted} strokeWidth={2} />
               </Pressable>
             ))}
           </View>

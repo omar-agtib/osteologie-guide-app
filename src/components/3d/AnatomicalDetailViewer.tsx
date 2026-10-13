@@ -74,14 +74,19 @@ function CameraFollowingLight() {
   const { camera } = useThree();
 
   useFrame(() => {
-    if (!lightRef.current) return;
+    const light = lightRef.current;
+    if (!light) return;
 
-    lightRef.current.position.copy(camera.position);
-    lightRef.current.target.position.set(0, 0, 0);
-    lightRef.current.target.updateMatrixWorld();
+    const direction = camera.position.clone().normalize();
+
+    light.position.copy(direction.multiplyScalar(6));
+    light.target.position.set(0, 0, 0);
+
+    light.updateMatrixWorld();
+    light.target.updateMatrixWorld();
   });
 
-  return <directionalLight ref={lightRef} intensity={1.8} color="#FFFFFF" />;
+  return <directionalLight ref={lightRef} intensity={2.2} color="#FFFFFF" />;
 }
 
 function AnatomicalScene({
@@ -196,7 +201,6 @@ function AnatomicalScene({
      ---------------------------------------------------------- */
 
   useEffect(() => {
-    console.log("DETAIL SCENE: model ready inside Canvas");
 
     onLoaded();
   }, [scene, onLoaded]);
@@ -277,10 +281,7 @@ function AnatomicalScene({
 
     result.sort((a, b) => a.numero - b.numero);
 
-    console.log(
-      "ANATOMICAL LANDMARKS:",
-      result.map((landmark) => `${landmark.numero} - ${landmark.nom}`),
-    );
+    
 
     return result;
   }, [scene]);
@@ -482,9 +483,7 @@ function AnatomicalScene({
 
     const scale = maxDimension > 0 ? targetSize / maxDimension : 1;
 
-    console.log("DETAIL MODEL DIMENSIONS:", dimensions.toArray());
-
-    console.log("DETAIL MODEL SCALE:", scale);
+    
 
     return {
       center,
@@ -791,7 +790,6 @@ export default function AnatomicalDetailViewer({
 
     const loadModel = async () => {
       try {
-        console.log("DETAIL: resolving asset", modelAsset);
 
         setLoading(true);
         setLoadedScene(null);
@@ -804,12 +802,7 @@ export default function AnatomicalDetailViewer({
 
         const asset = Asset.fromModule(modelAsset);
 
-        console.log("DETAIL: asset info", {
-          name: asset.name,
-          type: asset.type,
-          uri: asset.uri,
-          localUri: asset.localUri,
-        });
+       
 
         await asset.downloadAsync();
 
@@ -823,7 +816,6 @@ export default function AnatomicalDetailViewer({
           throw new Error("Unable to resolve GLB URI.");
         }
 
-        console.log("DETAIL: asset ready", uri);
 
         /* -----------------------------------------
          READ GLB INTO MEMORY
@@ -843,7 +835,6 @@ export default function AnatomicalDetailViewer({
           return;
         }
 
-        console.log("DETAIL: GLB read into memory", base64.length);
 
         /* -----------------------------------------
          BASE64 -> ARRAYBUFFER
@@ -859,7 +850,6 @@ export default function AnatomicalDetailViewer({
 
         const arrayBuffer = bytes.buffer;
 
-        console.log("DETAIL: GLB ArrayBuffer ready", arrayBuffer.byteLength);
 
         /* -----------------------------------------
          PARSE GLB DIRECTLY FROM MEMORY
@@ -877,9 +867,7 @@ export default function AnatomicalDetailViewer({
               return;
             }
 
-            console.log("DETAIL: GLTFLoader PARSE SUCCESS", {
-              children: gltf.scene.children.length,
-            });
+            
 
             setLoadedScene(gltf.scene);
           },
@@ -917,7 +905,7 @@ export default function AnatomicalDetailViewer({
      ---------------------------------------------------------- */
 
   const handleLoaded = useCallback(() => {
-    console.log("=== DETAIL MODEL FULLY LOADED ===");
+    
 
     setLoading(false);
   }, []);
@@ -1012,7 +1000,7 @@ export default function AnatomicalDetailViewer({
             gl.toneMapping = THREE.NoToneMapping;
           }}
         >
-          <hemisphereLight args={["#FFFFFF", "#AAB2B6", 1.7]} />
+          <ambientLight intensity={1.5} />
 
           {loadedScene && (
             <AnatomicalScene

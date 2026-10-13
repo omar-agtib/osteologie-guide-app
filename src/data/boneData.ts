@@ -20,7 +20,7 @@ export const boneData: Record<string, BoneInfo> = {
     name: "Clavicule",
 
     definition:
-      "Os allongé en forme de « S » étiré, la clavicule est l’élément antérieur des os du squelette de la ceinture scapulaire.",
+      "Os long, pair, en forme de « S » étiré, la clavicule est l’élément antérieur des os du squelette de la ceinture scapulaire.",
 
     situation:
       "Elle s’articule en dedans avec le sternum et en dehors avec la scapula.",

@@ -150,7 +150,6 @@ function RealSkeleton({
   const model = useMemo(() => {
     const clone = scene.clone(true);
 
-    console.log("========== ALL SKELETON MESHES ==========");
 
     const meshNames: string[] = [];
 
@@ -160,10 +159,7 @@ function RealSkeleton({
       }
     });
 
-    console.log("TOTAL MESHES:", meshNames.length);
-    console.log(JSON.stringify(meshNames, null, 2));
 
-    console.log("========================================");
 
     clone.traverse((object) => {
       if (!(object as THREE.Mesh).isMesh) return;

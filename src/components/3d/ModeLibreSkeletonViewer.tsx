@@ -480,7 +480,6 @@ function SkeletonScene({
 
     mesh.localToWorld(tempWorldPosition);
 
-    console.log("BONE CLICKED:", mesh.name);
 
     onBoneSelected(mesh.name || "Unknown bone", mesh);
 

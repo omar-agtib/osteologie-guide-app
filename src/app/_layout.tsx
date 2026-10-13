@@ -10,6 +10,16 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "../lib/auth-context";
+import { LogBox } from "react-native";
+
+
+LogBox.ignoreLogs([
+  "EXGL: gl.pixelStorei() doesn't support this parameter yet!",
+  "THREE.Clock: This module has been deprecated",
+  "THREE.WARNING: Multiple instances of Three.js being imported",
+  "THREE.WebGLRenderer: EXT_color_buffer_float extension not supported",
+  "THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+]);
 
 SplashScreen.preventAutoHideAsync();
 
