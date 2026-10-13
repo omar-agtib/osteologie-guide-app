@@ -34,15 +34,15 @@ function toAppUser(u: FirebaseUser): AppUser {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [initializing, setInitializing] = useState(true);
+  const [initializing, setInitializing] = useState(false);
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (fbUser) => {
-      setUser(fbUser ? toAppUser(fbUser) : null);
-      setInitializing(false);
-    });
-    return unsub;
-  }, []);
+  // useEffect(() => {
+  //   const unsub = onAuthStateChanged(auth, (fbUser) => {
+  //     setUser(fbUser ? toAppUser(fbUser) : null);
+  //     setInitializing(false);
+  //   });
+  //   return unsub;
+  // }, []);
 
   const signInWithEmail = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);

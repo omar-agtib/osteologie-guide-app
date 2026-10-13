@@ -1,6 +1,6 @@
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Tabs } from "expo-router";
-import { Grid2x2, Home, User } from "lucide-react-native";
+import { Grid2x2, Home } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../../../constants/theme";
 
 export default function TabsLayout() {
@@ -40,13 +40,14 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="profil"
         options={{
           title: "Profil",
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
-      />
+      /> */}
+      <Tabs.Screen name="profil" options={{ href: null }} />
     </Tabs>
   );
 }

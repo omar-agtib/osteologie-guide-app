@@ -59,9 +59,9 @@ export default function QuizScreen() {
       setSavingResult(true);
       setSaveError(null);
       try {
-        if (!user) throw new Error("Utilisateur non connecté");
-        await saveQuizResult(user.uid, zone, score, questions.length);
-        setResultSaved(true);
+        // if (!user) throw new Error("Utilisateur non connecté");
+        // await saveQuizResult(user.uid, zone, score, questions.length);
+        // setResultSaved(true);
       } catch (error) {
         console.error("Erreur sauvegarde quiz :", error);
         setResultSaved(false);
