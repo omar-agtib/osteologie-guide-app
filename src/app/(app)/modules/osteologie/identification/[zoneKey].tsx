@@ -137,7 +137,9 @@ export default function IdentificationScreen() {
   const [selectedBone, setSelectedBone] = useState<string | null>(null);
 
   const bones = IDENTIFICATION_BONES[zone] ?? [];
-
+  const isBoneEnabled = (boneId: string) => {
+    return boneId === "clavicle" || boneId === "scapula";
+  };
   const handleBack = () => {
     // Si on est dans un exercice,
     // retour à la liste des os.
@@ -197,7 +199,7 @@ export default function IdentificationScreen() {
             </Text>
           </View>
 
-          <View style={styles.bonesList}>
+          {/* <View style={styles.bonesList}>
             {bones.map((bone) => (
               <Pressable
                 key={bone.id}
@@ -236,7 +238,95 @@ export default function IdentificationScreen() {
                 <ChevronRight size={20} color={colors.muted} strokeWidth={2} />
               </Pressable>
             ))}
+          </View> */}
+
+
+          <View style={styles.bonesList}>
+            {bones.map((bone) => {
+              const enabled = isBoneEnabled(bone.id);
+
+              return (
+                <Pressable
+                  key={bone.id}
+                  disabled={!enabled}
+                  style={({ pressed }) => [
+                    styles.boneCard,
+                    !enabled && styles.boneCardDisabled,
+                    pressed && enabled && styles.boneCardPressed,
+                  ]}
+                  onPress={() => {
+                    if (enabled) {
+                      setSelectedBone(bone.id);
+                    }
+                  }}
+                >
+                  <View
+                    style={[
+                      styles.iconContainer,
+                      !enabled && { backgroundColor: "#E5E7EB" },
+                    ]}
+                  >
+                    <Bone
+                      size={22}
+                      color={enabled ? colors.ink : "#A0A0A0"}
+                      strokeWidth={1.9}
+                    />
+                  </View>
+
+                  <View style={styles.boneInfo}>
+                    <Text
+                      style={[
+                        styles.boneTitle,
+                        !enabled && { color: "#999999" },
+                      ]}
+                    >
+                      {bone.title}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.boneSubtitle,
+                        !enabled && { color: "#AAAAAA" },
+                      ]}
+                    >
+                      {enabled
+                        ? (() => {
+                          const count = (
+                            IDENTIFICATION_EXERCISES[zone] ?? []
+                          ).filter(
+                            (exercise) =>
+                              exercise.id === bone.id ||
+                              exercise.id.startsWith(`${bone.id}-`)
+                          ).length;
+
+                          return `${count} ${count === 1
+                            ? "planche d'identification"
+                            : "planches d'identification"
+                            }`;
+                        })()
+                        : "Bientôt disponible"}
+                    </Text>
+                  </View>
+
+                  {enabled ? (
+                    <ChevronRight
+                      size={20}
+                      color={colors.muted}
+                      strokeWidth={2}
+                    />
+                  ) : (
+                    <Bone
+                      size={18}
+                      color="#B0B0B0"
+                      strokeWidth={1.5}
+                    />
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
+
+
         </ScrollView>
       )}
     </View>
@@ -244,6 +334,12 @@ export default function IdentificationScreen() {
 }
 
 const styles = StyleSheet.create({
+  boneCardDisabled: {
+    backgroundColor: "#F0F0F0",
+    borderColor: "#E0E0E0",
+    opacity: 0.65,
+  },
+
   screen: {
     flex: 1,
     backgroundColor: colors.bg,

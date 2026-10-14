@@ -52,26 +52,26 @@ export const ZONE_DETAILS: Record<ZoneKey, ZoneDetail> = {
         chip: { x: 82, y: 44 },
       },
       {
-  id: "radius",
-  name: "Radius",
-  description:
-    "Os long latéral de l'avant-bras, situé du côté du pouce. Il participe aux articulations du coude et du poignet et intervient dans les mouvements de pronation et de supination.",
-  anchor: { x: 55, y: 65 },
-  chip: { x: 80, y: 62 },
-},
-{
-  id: "ulna",
-  name: "Ulna",
-  description:
-    "Os long médial de l'avant-bras, situé du côté du petit doigt. Il forme une partie importante de l'articulation du coude et s'articule avec le radius.",
-  anchor: { x: 55, y: 72 },
-  chip: { x: 80, y: 78 },
-},
+        id: "radius",
+        name: "Radius",
+        description:
+          "Os long latéral de l'avant-bras, situé du côté du pouce. Il participe aux articulations du coude et du poignet et intervient dans les mouvements de pronation et de supination.",
+        anchor: { x: 55, y: 65 },
+        chip: { x: 80, y: 62 },
+      },
+      {
+        id: "ulna",
+        name: "Ulna",
+        description:
+          "Os long médial de l'avant-bras, situé du côté du petit doigt. Il forme une partie importante de l'articulation du coude et s'articule avec le radius.",
+        anchor: { x: 55, y: 72 },
+        chip: { x: 80, y: 78 },
+      },
       {
         id: "carpe",
         name: "squelette de la main",
         description:
-          "Huit petits os courts formant le poignet, entre l'avant-bras et la main.",
+          "Élément le plus distal du membre supérieur. La main est formée de 27 os répartis en 3 groupes : le carpe, le métacarpe et les phalanges.",
         anchor: { x: 52, y: 84 },
         chip: { x: 22, y: 88 },
       },

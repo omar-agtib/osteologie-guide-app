@@ -28,11 +28,6 @@ export const boneData: Record<string, BoneInfo> = {
     orientation:
       "L’extrémité volumineuse est médiale, la face inférieure est rugueuse et la grande convexité est médiale et antérieure.",
 
-    descriptionAnatomique:
-      "Le corps comprend deux faces et deux bords. La face supérieure est lisse, sous-cutanée et palpable. La face inférieure est rugueuse et centrée par une gouttière où s’insère le muscle subclavier. Les épiphyses sont médiale ou sternale et latérale ou acromiale.",
-
-    articulations:
-      "L’épiphyse médiale porte une surface articulaire avec le sternum. L’épiphyse latérale porte une facette articulaire avec l’acromion.",
 
     reperesPalpables:
       "La clavicule est sous-cutanée et entièrement palpable sauf sur sa face inférieure.",
@@ -40,6 +35,27 @@ export const boneData: Record<string, BoneInfo> = {
     applicationsCliniques:
       "La fracture de la clavicule est fréquente lors des accidents de la voie publique.",
   },
+
+  Scapula: {
+    name: "Scapula",
+
+    definition:
+      "C’est un os plat et triangulaire de la ceinture scapulaire. Situé dans la région postérosupérieure du thorax.",
+
+    situation:
+      "La scapula est amarrée par des muscles à la paroi thoracique postérieure, en regard de la 2e à la 7e côte.\nElle s’articule : en dehors avec l’humérus, et en haut et en dehors avec la clavicule.",
+
+    orientation:
+      "La face antérieure ou costale est concave.\nLa cavité glénoïdale est supérieure et latérale.",
+
+    reperesPalpables:
+      "L’épine, l’acromion, l’angle inférieur, le bord médial et le processus coracoïde.",
+
+    applicationsCliniques:
+      "Fracture du col de la scapula (intervention chirurgicale parfois nécessaire).\nL’acromion est un point de repère anatomique dans l’abord chirurgical de l’épaule.",
+  },
+
+
 
   Humerus: {
     name: "Humérus",

@@ -56,7 +56,7 @@ type Props = {
   onInteractionChange?: (interacting: boolean) => void;
 };
 
-const DEFAULT_ZOOM = 0.5;
+const DEFAULT_ZOOM = 0.4;
 
 type OrientationLabels = {
   top: string;
@@ -242,10 +242,10 @@ function AnatomicalScene({
       const normal =
         Array.isArray(data.normale) && data.normale.length >= 3
           ? new THREE.Vector3(
-              data.normale[0],
-              data.normale[1],
-              data.normale[2],
-            ).normalize()
+            data.normale[0],
+            data.normale[1],
+            data.normale[2],
+          ).normalize()
           : null;
 
       result.push({
@@ -267,10 +267,10 @@ function AnatomicalScene({
         camera:
           Array.isArray(data.camera) && data.camera.length >= 3
             ? [
-                Number(data.camera[0]),
-                Number(data.camera[1]),
-                Number(data.camera[2]),
-              ]
+              Number(data.camera[0]),
+              Number(data.camera[1]),
+              Number(data.camera[2]),
+            ]
             : undefined,
 
         normal,
@@ -281,7 +281,7 @@ function AnatomicalScene({
 
     result.sort((a, b) => a.numero - b.numero);
 
-    
+
 
     return result;
   }, [scene]);
@@ -483,7 +483,7 @@ function AnatomicalScene({
 
     const scale = maxDimension > 0 ? targetSize / maxDimension : 1;
 
-    
+
 
     return {
       center,
@@ -802,7 +802,7 @@ export default function AnatomicalDetailViewer({
 
         const asset = Asset.fromModule(modelAsset);
 
-       
+
 
         await asset.downloadAsync();
 
@@ -867,7 +867,7 @@ export default function AnatomicalDetailViewer({
               return;
             }
 
-            
+
 
             setLoadedScene(gltf.scene);
           },
@@ -905,7 +905,7 @@ export default function AnatomicalDetailViewer({
      ---------------------------------------------------------- */
 
   const handleLoaded = useCallback(() => {
-    
+
 
     setLoading(false);
   }, []);
@@ -944,7 +944,7 @@ export default function AnatomicalDetailViewer({
       zoomRef.current = THREE.MathUtils.clamp(
         zoomStartRef.current * Math.pow(scale, 1.2),
 
-        0.6,
+        0.2,
 
         3,
       );
@@ -1126,9 +1126,8 @@ export default function AnatomicalDetailViewer({
             }}
           >
             <Text style={styles.mirrorButtonText}>
-              {`${
-                boneName === "Clavicle" ? "Clavicule" : boneName
-              } ${mirrored ? "droite" : "gauche"} (miroir)`}
+              {`${boneName === "Clavicle" ? "Clavicule" : boneName
+                } ${mirrored ? "droite" : "gauche"} (miroir)`}
             </Text>
           </Pressable>
 
